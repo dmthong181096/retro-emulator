@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Retro Console Emulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #00ff88;
+            margin-bottom: 1rem;
+        }
+
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            margin: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #00cc6a;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .back-button {
+            background: #ff6b6b;
+            color: white;
+            margin: 0 5px;
+        }
+
+        .back-button:hover {
+            background: #ff5252;
+        }
+
+        #game {
+            width: 100%;
+            height: 500px;
+            background: #000;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .debug {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .debug h4 {
+            color: #00ff88;
+            margin-bottom: 1rem;
+        }
+
+        .debug-logs {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        .status {
+            color: #00ff88;
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="console-title">🎮 Console Emulator</h1>
+            <p>Chọn ROM file và nhấn "Chơi Game" để bắt đầu</p>
+        </div>
+
+        <div class="controls">
+            <input type="file" id="romFile" accept=".nes,.smc,.sfc,.gb,.gbc,.gba,.md,.gen,.bin,.iso" />
+            <button id="startButton" onclick="startGame()" disabled>🎮 Chơi Game</button>
+            <button class="back-button" onclick="goHome()">🏠 Trang chủ</button>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div id="game"></div>
+
+        <div class="info">
+            <h3>Hướng dẫn sử dụng:</h3>
+            <ul>
+                <li><strong>Chọn ROM:</strong> Click "Choose File" và chọn ROM file tương ứng</li>
+                <li><strong>Khởi động:</strong> Nhấn "🎮 Chơi Game" để bắt đầu</li>
+                <li><strong>Điều khiển:</strong> Arrow keys (di chuyển), Z (A), X (B), Enter (Start), Shift (Select)</li>
+                <li><strong>Toàn màn hình:</strong> Nhấn F11 hoặc sử dụng menu trong game</li>
+                <li><strong>Save/Load:</strong> Sử dụng menu EmulatorJS để lưu và tải game</li>
+            </ul>
+            
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255,193,7,0.2); border-radius: 10px; border-left: 4px solid #ffc107;">
+                <h4 style="color: #ffc107; margin-bottom: 10px;">⚖️ Lưu ý quan trọng về bản quyền</h4>
+                <p style="margin: 0; line-height: 1.6;">
+                    • Chỉ sử dụng ROM từ các game bạn sở hữu hợp pháp<br>
+                    • Emulator này chỉ cung cấp công cụ, không bao gồm ROM files<br>
+                    • Hãy tuân thủ luật bản quyền trong khu vực của bạn<br>
+                    • Tôn trọng quyền sở hữu trí tuệ của các nhà phát triển game
+                </p>
+            </div>
+        </div>
+
+        <div class="debug">
+            <h4>🔧 Debug Info</h4>
+            <div id="debugInfo">
+                <p><strong>Console:</strong> <span id="consoleType">-</span></p>
+                <p><strong>Core:</strong> <span id="coreType">-</span></p>
+                <p><strong>Selected File:</strong> <span id="selectedFile">None</span></p>
+                <p><strong>Game Started:</strong> <span id="gameStatus">❌</span></p>
+            </div>
+            <div class="debug-logs" id="debugLogs">Ready to load ROM...</div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let consoleType = null;
+        let gameStarted = false;
+
+        const consoleNames = {
+            'nes': 'Nintendo Entertainment System',
+            'snes': 'Super Nintendo',
+            'gb': 'Game Boy',
+            'gba': 'Game Boy Advance',
+            'genesis': 'Sega Genesis',
+            'psx': 'PlayStation 1'
+        };
+
+        const consoleConfigs = {
+            'nes': 'fceumm',
+            'snes': 'snes9x',
+            'gb': 'gambatte',
+            'gba': 'mgba',
+            'genesis': 'genesis_plus_gx',
+            'psx': 'pcsx_rearmed'
+        };
+
+        // Get console type from URL parameters
+        function getConsoleFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('console') || 'gba';
+        }
+
+        function addDebugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const debugLogs = document.getElementById('debugLogs');
+            debugLogs.innerHTML += '<br>' + timestamp + ': ' + message;
+            debugLogs.scrollTop = debugLogs.scrollHeight;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function updateDebugInfo() {
+            document.getElementById('consoleType').textContent = consoleType;
+            document.getElementById('coreType').textContent = consoleConfigs[consoleType];
+            document.getElementById('selectedFile').textContent = selectedFile ? selectedFile.name : 'None';
+            document.getElementById('gameStatus').textContent = gameStarted ? '✅' : '❌';
+        }
+
+        // Initialize page
+        function init() {
+            consoleType = getConsoleFromURL();
+            document.getElementById('console-title').textContent = '🎮 ' + (consoleNames[consoleType] || 'Console Emulator');
+            updateDebugInfo();
+            addDebugLog('Console ' + consoleType + ' ready');
+            
+            // Set up file input
+            document.getElementById('romFile').addEventListener('change', function(e) {
+                selectedFile = e.target.files[0];
+                if (selectedFile) {
+                    console.log('📁 File selected:', selectedFile.name);
+                    addDebugLog('📁 File selected: ' + selectedFile.name);
+                    updateStatus('✅ Đã chọn: ' + selectedFile.name);
+                    document.getElementById('startButton').disabled = false;
+                    updateDebugInfo();
+                    
+                    // Validate extension
+                    const extension = selectedFile.name.toLowerCase().split('.').pop();
+                    const validExtensions = {
+                        'nes': ['nes'],
+                        'snes': ['smc', 'sfc'],
+                        'gb': ['gb', 'gbc'],
+                        'gba': ['gba'],
+                        'genesis': ['md', 'gen', 'bin'],
+                        'psx': ['bin', 'iso', 'cue']
+                    };
+
+                    const consoleExtensions = validExtensions[consoleType] || [];
+                    if (!consoleExtensions.includes(extension)) {
+                        addDebugLog('⚠️ Warning: .' + extension + ' may not be compatible');
+                    }
+                }
+            });
+
+            // Set up EmulatorJS callbacks
+            window.EJS_onGameStart = function() {
+                console.log('🎉 Game started successfully!');
+                gameStarted = true;
+                addDebugLog('🎉 Game started successfully!');
+                updateStatus('🎮 Game đang chạy! Sử dụng Arrow keys, Z, X, Enter, Shift để điều khiển');
+                updateDebugInfo();
+            };
+
+            window.EJS_onError = function(error) {
+                console.error('❌ EmulatorJS Error:', error);
+                addDebugLog('❌ Error: ' + error);
+            };
+        }
+
+        function startGame() {
+            if (!selectedFile) {
+                alert('Vui lòng chọn ROM file trước!');
+                return;
+            }
+
+            try {
+                console.log('🚀 Starting game:', selectedFile.name);
+                addDebugLog('🚀 Starting game: ' + selectedFile.name);
+                updateStatus('🎮 Đang tải game...');
+                
+                // Create object URL
+                const gameUrl = URL.createObjectURL(selectedFile);
+                console.log('🔗 Game URL created:', gameUrl);
+                
+                // Set EmulatorJS variables
+                window.EJS_player = "#game";
+                window.EJS_core = consoleConfigs[consoleType];
+                window.EJS_pathtodata = "/emulatorjs/";
+                window.EJS_gameUrl = gameUrl;
+                window.EJS_language = "en-US";
+                window.EJS_startOnLoaded = true;
+                window.EJS_fullscreenOnLoad = false;
+                window.EJS_gameID = selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_');
+                window.EJS_gameName = selectedFile.name;
+                
+                console.log('🎯 EmulatorJS variables set');
+                addDebugLog('🎯 EmulatorJS variables set');
+                
+                // Load EmulatorJS
+                const script = document.createElement('script');
+                script.src = '/emulatorjs/loader.js';
+                script.onload = function() {
+                    console.log('✅ EmulatorJS loaded successfully');
+                    addDebugLog('✅ EmulatorJS loaded successfully');
+                };
+                script.onerror = function(error) {
+                    console.error('❌ Failed to load EmulatorJS:', error);
+                    addDebugLog('❌ Failed to load EmulatorJS');
+                    updateStatus('❌ Lỗi khi tải EmulatorJS');
+                };
+                
+                document.body.appendChild(script);
+                
+            } catch (error) {
+                console.error('❌ Error starting game:', error);
+                addDebugLog('❌ Error: ' + error.message);
+                updateStatus('❌ Lỗi: ' + error.message);
+            }
+        }
+
+        function goHome() {
+            // Go back to React app home page
+            window.location.href = '/';
+        }
+
+        // Initialize when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>

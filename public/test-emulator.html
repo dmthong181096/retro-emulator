@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test EmulatorJS</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            background: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #game {
+            width: 100%;
+            height: 500px;
+            background: #000;
+            border-radius: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        input[type="file"] {
+            padding: 10px;
+            margin: 10px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .debug {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Test EmulatorJS - Game Boy Advance</h1>
+        
+        <div class="controls">
+            <input type="file" id="romFile" accept=".gba" />
+            <button onclick="startGame()">🎮 Start Game</button>
+        </div>
+        
+        <div id="game"></div>
+        
+        <div class="debug">
+            <h3>Debug Info:</h3>
+            <div id="debugInfo">Ready to load ROM...</div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        
+        document.getElementById('romFile').addEventListener('change', function(e) {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                updateDebug('File selected: ' + selectedFile.name);
+                console.log('📁 File selected:', selectedFile.name);
+            }
+        });
+        
+        function startGame() {
+            if (!selectedFile) {
+                alert('Please select a ROM file first!');
+                return;
+            }
+            
+            updateDebug('Starting game: ' + selectedFile.name);
+            console.log('🚀 Starting game:', selectedFile.name);
+            
+            // Create object URL for the ROM file
+            const gameUrl = URL.createObjectURL(selectedFile);
+            console.log('🔗 Game URL created:', gameUrl);
+            
+            // Set EmulatorJS variables (following docs pattern)
+            window.EJS_player = "#game";
+            window.EJS_core = "mgba";  // mGBA core for GBA
+            window.EJS_pathtodata = "/emulatorjs/";
+            window.EJS_gameUrl = gameUrl;
+            
+            // Additional settings to reduce warnings
+            window.EJS_language = "en-US";
+            window.EJS_startOnLoaded = true;
+            window.EJS_fullscreenOnLoad = false;
+            window.EJS_gameID = selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_'); // Create unique game ID
+            window.EJS_gameName = selectedFile.name;
+            
+            console.log('🎯 EmulatorJS variables set:', {
+                player: window.EJS_player,
+                core: window.EJS_core,
+                pathtodata: window.EJS_pathtodata,
+                gameUrl: !!window.EJS_gameUrl
+            });
+            
+            updateDebug('Loading EmulatorJS...');
+            
+            // Load loader.js (following docs pattern)
+            const loaderScript = document.createElement('script');
+            loaderScript.src = '/emulatorjs/loader.js';
+            loaderScript.onload = function() {
+                console.log('✅ Loader.js loaded successfully');
+                updateDebug('EmulatorJS loaded! Game should start automatically.');
+            };
+            loaderScript.onerror = function(error) {
+                console.error('❌ Failed to load loader.js:', error);
+                updateDebug('❌ Error loading EmulatorJS: ' + error);
+            };
+            
+            document.body.appendChild(loaderScript);
+        }
+        
+        function updateDebug(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+        
+        // EmulatorJS callbacks
+        window.EJS_onGameStart = function() {
+            console.log('🎉 Game started successfully!');
+            updateDebug('🎉 Game started successfully!');
+        };
+        
+        window.EJS_onError = function(error) {
+            console.error('❌ EmulatorJS Error:', error);
+            updateDebug('❌ EmulatorJS Error: ' + error);
+        };
+    </script>
+</body>
+</html>
