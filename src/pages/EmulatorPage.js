@@ -6,6 +6,7 @@ const EmulatorPage = () => {
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [isGameStarted, setIsGameStarted] = useState(false);
+  const [isGameLoaded, setIsGameLoaded] = useState(false);
 
   // Console information with supported file formats
   const consoleInfo = {
@@ -39,21 +40,27 @@ const EmulatorPage = () => {
 
     createParticles();
 
-    // Cleanup function
-    return () => {
+    // Cleanup function - runs when component unmounts OR when dependencies change
+    const cleanup = () => {
+      console.log('🧹 Cleaning up EmulatorJS...');
+      
+      // Reset states
+      setIsGameStarted(false);
+      setIsGameLoaded(false);
+      
       const particlesContainer = document.getElementById('particles');
       if (particlesContainer) {
         particlesContainer.innerHTML = '';
       }
       
-      // Cleanup EmulatorJS safely
+      // Cleanup game container (iframe will be destroyed automatically)
       const gameContainer = document.getElementById('gameContainer');
       if (gameContainer) {
         gameContainer.innerHTML = '';
       }
       
-      // Remove EmulatorJS scripts safely
-      const scripts = document.querySelectorAll('script[src*="loader.js"]');
+      // Remove any remaining scripts (just in case)
+      const scripts = document.querySelectorAll('script[src*="loader.js"], script[src*="emulator.min.js"], script[src*="emulator.js"]');
       scripts.forEach(script => {
         try {
           if (script.parentNode) {
@@ -63,84 +70,20 @@ const EmulatorPage = () => {
           console.warn('Script cleanup warning:', e);
         }
       });
-      
-      // Clear EmulatorJS globals safely
-      try {
-        if (window.EJS_player) delete window.EJS_player;
-        if (window.EJS_core) delete window.EJS_core;
-        if (window.EJS_gameUrl) delete window.EJS_gameUrl;
-        if (window.EJS_onGameStart) delete window.EJS_onGameStart;
-        if (window.EJS_onError) delete window.EJS_onError;
-        if (window.EJS_pathtodata) delete window.EJS_pathtodata;
-        if (window.EJS_language) delete window.EJS_language;
-        if (window.EJS_startOnLoaded) delete window.EJS_startOnLoaded;
-        if (window.EJS_fullscreenOnLoad) delete window.EJS_fullscreenOnLoad;
-        if (window.EJS_gameID) delete window.EJS_gameID;
-        if (window.EJS_gameName) delete window.EJS_gameName;
-        if (window.EJS_width) delete window.EJS_width;
-        if (window.EJS_height) delete window.EJS_height;
-        if (window.EJS_STORAGE) delete window.EJS_STORAGE;
-        if (window.EJS_biosUrl) delete window.EJS_biosUrl;
-        if (window.EJS_gameParent) delete window.EJS_gameParent;
-        if (window.EJS_oldCores) delete window.EJS_oldCores;
-        if (window.EJS_lightgun) delete window.EJS_lightgun;
-        if (window.EJS_mouse) delete window.EJS_mouse;
-        if (window.EJS_multitap) delete window.EJS_multitap;
-        if (window.EJS_softpatching) delete window.EJS_softpatching;
-        if (window.EJS_cheats) delete window.EJS_cheats;
-        if (window.EJS_defaultControls) delete window.EJS_defaultControls;
-        if (window.EJS_threads) delete window.EJS_threads;
-        if (window.EJS_DEBUG_XX) delete window.EJS_DEBUG_XX;
-        if (window.EJS_RESET_VARS) delete window.EJS_RESET_VARS;
-        if (window.EJS_ready) delete window.EJS_ready;
-        if (window.EJS_emulator) delete window.EJS_emulator;
-        if (window.EJS_gameManager) delete window.EJS_gameManager;
-        if (window.EJS_main) delete window.EJS_main;
-        if (window.EJS_terminate) delete window.EJS_terminate;
-        if (window.EJS_restart) delete window.EJS_restart;
-        if (window.EJS_pause) delete window.EJS_pause;
-        if (window.EJS_mute) delete window.EJS_mute;
-        if (window.EJS_volume) delete window.EJS_volume;
-        if (window.EJS_color) delete window.EJS_color;
-        if (window.EJS_startVirtualGamepad) delete window.EJS_startVirtualGamepad;
-        if (window.EJS_stopVirtualGamepad) delete window.EJS_stopVirtualGamepad;
-        if (window.EJS_virtualGamepadSettings) delete window.EJS_virtualGamepadSettings;
-        if (window.EJS_AdUrl) delete window.EJS_AdUrl;
-        if (window.EJS_loadStateURL) delete window.EJS_loadStateURL;
-        if (window.EJS_loadState) delete window.EJS_loadState;
-        if (window.EJS_saveState) delete window.EJS_saveState;
-        if (window.EJS_quickSaveState) delete window.EJS_quickSaveState;
-        if (window.EJS_quickLoadState) delete window.EJS_quickLoadState;
-        if (window.EJS_screenshot) delete window.EJS_screenshot;
-        if (window.EJS_fullscreen) delete window.EJS_fullscreen;
-        if (window.EJS_toggleMainLoop) delete window.EJS_toggleMainLoop;
-        if (window.EJS_simulateInput) delete window.EJS_simulateInput;
-        if (window.EJS_setVolume) delete window.EJS_setVolume;
-        if (window.EJS_getVolume) delete window.EJS_getVolume;
-        if (window.EJS_setVariable) delete window.EJS_setVariable;
-        if (window.EJS_getVariable) delete window.EJS_getVariable;
-        if (window.EJS_resizeCanvas) delete window.EJS_resizeCanvas;
-        if (window.EJS_functions) delete window.EJS_functions;
-        if (window.EJS_cachedFunction) delete window.EJS_cachedFunction;
-        if (window.EJS_Buttons) delete window.EJS_Buttons;
-        if (window.EJS_VirtualGamepadSettings) delete window.EJS_VirtualGamepadSettings;
-        if (window.EJS_onSaveState) delete window.EJS_onSaveState;
-        if (window.EJS_onLoadState) delete window.EJS_onLoadState;
-        if (window.EJS_Netplay) delete window.EJS_Netplay;
-        if (window.EJS_NetplayConfig) delete window.EJS_NetplayConfig;
-        
-        // Clear all EJS_ prefixed variables
-        Object.keys(window).forEach(key => {
-          if (key.startsWith('EJS_')) {
-            try {
-              delete window[key];
-            } catch (e) {
-              // Ignore errors for non-configurable properties
-            }
-          }
-        });
-      } catch (e) {
-        console.warn('Cleanup warning:', e);
+    };
+
+    // Return cleanup function
+    return cleanup;
+  }, []);
+
+  // Additional cleanup when component unmounts (backup)
+  useEffect(() => {
+    return () => {
+      console.log('🚪 Component unmounting - final cleanup');
+      // Simple cleanup since we're using iframe isolation
+      const gameContainer = document.getElementById('gameContainer');
+      if (gameContainer) {
+        gameContainer.innerHTML = '';
       }
     };
   }, []);
@@ -169,75 +112,88 @@ const EmulatorPage = () => {
         const gameUrl = URL.createObjectURL(selectedFile);
         console.log('🔗 Game URL created:', gameUrl);
         
-        // Clear any existing EmulatorJS content safely
+        // Clear any existing content
         const gameContainer = document.getElementById('gameContainer');
         if (gameContainer) {
           gameContainer.innerHTML = '';
         }
         
-        // Set EmulatorJS variables
-        window.EJS_player = "#gameContainer";
-        window.EJS_core = getConsoleCore(consoleType);
-        window.EJS_pathtodata = "/emulatorjs/";
-        window.EJS_gameUrl = gameUrl;
-        window.EJS_language = "en-US";
-        window.EJS_startOnLoaded = true;
-        window.EJS_fullscreenOnLoad = false;
-        window.EJS_gameID = selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_');
-        window.EJS_gameName = selectedFile.name;
-        window.EJS_width = '100%';
-        window.EJS_height = '480px';
+        // Create iframe to isolate EmulatorJS
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '480px';
+        iframe.style.border = 'none';
+        iframe.style.borderRadius = '15px';
+        iframe.style.backgroundColor = '#000';
         
-        console.log('🎯 EmulatorJS variables set for', consoleType);
+        // Create HTML content for iframe
+        const iframeContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Emulator</title>
+            <style>
+              body { margin: 0; padding: 0; background: #000; }
+              #emulator { width: 100%; height: 480px; }
+            </style>
+          </head>
+          <body>
+            <div id="emulator"></div>
+            <script>
+              window.EJS_player = "#emulator";
+              window.EJS_core = "${getConsoleCore(consoleType)}";
+              window.EJS_pathtodata = "${window.location.origin}/emulatorjs/";
+              window.EJS_gameUrl = "${gameUrl}";
+              window.EJS_language = "en-US";
+              window.EJS_startOnLoaded = true;
+              window.EJS_fullscreenOnLoad = false;
+              window.EJS_gameID = "${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}";
+              window.EJS_gameName = "${selectedFile.name}";
+              window.EJS_width = "100%";
+              window.EJS_height = "480px";
+              
+              window.EJS_onGameStart = function() {
+                console.log('🎉 Game started in iframe!');
+                parent.postMessage({type: 'gameStarted'}, '*');
+              };
+              
+              window.EJS_onError = function(error) {
+                console.error('❌ EmulatorJS Error in iframe:', error);
+                parent.postMessage({type: 'gameError', error: error}, '*');
+              };
+            </script>
+            <script src="${window.location.origin}/emulatorjs/loader.js?t=${Date.now()}"></script>
+          </body>
+          </html>
+        `;
         
-        // Set up EmulatorJS callbacks
-        window.EJS_onGameStart = function() {
-          console.log('🎉 Game started successfully!');
+        // Set iframe content
+        iframe.onload = function() {
+          console.log('✅ Iframe loaded successfully');
         };
-
-        window.EJS_onError = function(error) {
-          console.error('❌ EmulatorJS Error:', error);
-          setIsGameStarted(false);
-        };
         
-        // Remove any existing EmulatorJS scripts safely
-        const existingScripts = document.querySelectorAll('script[src*="loader.js"]');
-        existingScripts.forEach(script => {
-          try {
-            if (script.parentNode) {
-              script.parentNode.removeChild(script);
-            }
-          } catch (e) {
-            console.warn('Script already removed:', e);
-          }
-        });
+        iframe.srcdoc = iframeContent;
+        gameContainer.appendChild(iframe);
         
-        // Clear all EJS_ prefixed variables before loading new game
-        Object.keys(window).forEach(key => {
-          if (key.startsWith('EJS_')) {
-            try {
-              delete window[key];
-            } catch (e) {
-              // Ignore errors for non-configurable properties
-            }
-          }
-        });
-        
-        // Add delay before loading new script
-        setTimeout(() => {
-          // Load EmulatorJS
-          const script = document.createElement('script');
-          script.src = '/emulatorjs/loader.js';
-          script.onload = function() {
-            console.log('✅ EmulatorJS loaded successfully');
-          };
-          script.onerror = function(error) {
-            console.error('❌ Failed to load EmulatorJS:', error);
+        // Listen for messages from iframe
+        const messageHandler = (event) => {
+          if (event.data.type === 'gameStarted') {
+            console.log('🎉 Game started successfully in iframe!');
+            setIsGameLoaded(true);
+          } else if (event.data.type === 'gameError') {
+            console.error('❌ Game error in iframe:', event.data.error);
             setIsGameStarted(false);
-          };
-          
-          document.body.appendChild(script);
-        }, 500);
+            setIsGameLoaded(false);
+          }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        
+        // Cleanup message listener when component unmounts
+        return () => {
+          window.removeEventListener('message', messageHandler);
+        };
         
       } catch (error) {
         console.error('❌ Error starting game:', error);
@@ -311,6 +267,7 @@ const EmulatorPage = () => {
             {currentConsole.icon} {currentConsole.name}
           </h1>
           <p className="console-subtitle">Chọn ROM file và nhấn "Chơi Game" để bắt đầu</p>
+          <p className="supported-formats-text">Hỗ trợ: {currentConsole.files.join(', ')}</p>
         </div>
 
         <div className="main-content">
@@ -323,18 +280,26 @@ const EmulatorPage = () => {
                   className="file-input" 
                   accept={currentConsole.files.join(',')} 
                   onChange={handleFileSelect}
+                  disabled={isGameLoaded}
                 />
-                <label htmlFor="romFile" className="file-input-label">
-                  📁 Chọn ROM File
+                <label 
+                  htmlFor="romFile" 
+                  className={`file-input-label ${isGameLoaded ? 'disabled' : ''}`}
+                >
+                  {selectedFile ? (
+                    <>✅ {selectedFile.name.length > 15 ? selectedFile.name.substring(0, 15) + '...' : selectedFile.name}</>
+                  ) : (
+                    <>📁 {isGameLoaded ? 'Game đã tải' : 'Chọn ROM File'}</>
+                  )}
                 </label>
               </div>
               
               <button 
-                className="control-button" 
+                className="control-button play-button" 
                 onClick={startGame} 
                 disabled={!selectedFile || isGameStarted}
               >
-                {isGameStarted ? '🔄 Đang tải...' : '🎮 Chơi Game'}
+                {isGameStarted ? (isGameLoaded ? '🎮 Đang chơi' : '🔄 Đang tải...') : '🎮 Chơi Game'}
               </button>
               
               <button className="control-button home" onClick={goHome}>
