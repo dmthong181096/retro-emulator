@@ -30,7 +30,7 @@ body {
 .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
 }
 
 .hero-section {
@@ -377,7 +377,7 @@ body {
 /* Emulator Page Styles */
 .emulator-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1rem;
   opacity: 0;
   transform: translateY(30px);
 }
@@ -463,7 +463,7 @@ body {
 .main-content {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .controls-section {
@@ -629,7 +629,7 @@ body {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border-radius: 20px;
-  padding: 2rem;
+  padding: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   opacity: 0;
   transform: translateY(30px);
@@ -706,7 +706,7 @@ body {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border-radius: 20px;
-  padding: 2rem;
+  padding: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   opacity: 0;
   transform: translateY(30px);
@@ -769,5 +769,51 @@ body {
   
   .game-container {
     height: 320px;
+  }
+}
+
+/* Footer */
+.footer {
+  margin-top: 1rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.footer-content p {
+  margin: 0.3rem 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.author {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.author:hover {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    margin-top: 0.5rem;
+    padding: 0.8rem 0;
+  }
+  
+  .footer-content {
+    padding: 0 1rem;
+  }
+  
+  .footer-content p {
+    font-size: 0.8rem;
   }
 }

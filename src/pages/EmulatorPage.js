@@ -377,6 +377,14 @@ const EmulatorPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <p>© 2025 Retro Console Emulator • Made with ❤️ by <a href="https://github.com/dmthong181096" target="_blank" rel="noopener noreferrer" className="author">Thong Doan</a></p>
+          <p className="footer-note">Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</p>
+        </div>
+      </footer>
     </div>
   );
 };
