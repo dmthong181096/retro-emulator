@@ -80,6 +80,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 400px;
+  opacity: 0;
+  transform: translateY(30px);
 }
 
 .console-content {
@@ -326,6 +328,7 @@ body {
   height: 2px;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 50%;
+  opacity: 0;
   animation: particle-float 8s linear infinite;
 }
 
@@ -338,6 +341,10 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.console-card.animate {
+  animation: fadeInUp 0.8s ease-out forwards;
 }
 
 @keyframes gradientShift {
@@ -355,10 +362,10 @@ body {
     transform: translateY(100vh) translateX(0);
     opacity: 0;
   }
-  10% {
+  5% {
     opacity: 1;
   }
-  90% {
+  95% {
     opacity: 1;
   }
   100% {
@@ -546,17 +553,39 @@ body {
   height: 480px;
   background: #000;
   border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
-  overflow: hidden;
   border: 2px solid rgba(138, 43, 226, 0.3);
 }
 
 .game-placeholder {
   text-align: center;
   color: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+#gameContainer {
+  width: 100% !important;
+  height: 480px !important;
+  max-height: 480px !important;
+  position: relative !important;
+  background: #000 !important;
+  border-radius: 15px !important;
+}
+
+/* Allow EmulatorJS controls to show */
+#gameContainer .ejs-controls,
+#gameContainer .ejs-menu,
+#gameContainer .ejs-settings,
+#gameContainer .ejs-toolbar {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: absolute !important;
+  z-index: 1000 !important;
 }
 
 .game-placeholder-icon {

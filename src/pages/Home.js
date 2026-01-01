@@ -76,8 +76,9 @@ const Home = () => {
     // Add stagger animation to cards
     const cards = document.querySelectorAll('.console-card');
     cards.forEach((card, index) => {
-      card.style.animationDelay = (index * 0.1) + 's';
-      card.style.animation = 'fadeInUp 0.8s ease-out forwards';
+      setTimeout(() => {
+        card.classList.add('animate');
+      }, index * 100);
     });
 
     // Cleanup function
