@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getConsoleById, getConsoleCore } from '../config/Config';
+import Footer from '../components/Footer';
 
 const EmulatorPage = () => {
   const { console: consoleType } = useParams();
@@ -8,17 +10,12 @@ const EmulatorPage = () => {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [isGameLoaded, setIsGameLoaded] = useState(false);
 
-  // Console information with supported file formats
-  const consoleInfo = {
-    nes: { name: 'Nintendo Entertainment System', icon: '🎮', files: ['.nes'], color: 'nes' },
-    snes: { name: 'Super Nintendo', icon: '🕹️', files: ['.smc', '.sfc'], color: 'snes' },
-    gb: { name: 'Game Boy', icon: '📱', files: ['.gb', '.gbc'], color: 'gb' },
-    gba: { name: 'Game Boy Advance', icon: '🎯', files: ['.gba'], color: 'gba' },
-    genesis: { name: 'Sega Genesis', icon: '⚡', files: ['.md', '.gen'], color: 'genesis' },
-    psx: { name: 'PlayStation 1', icon: '💿', files: ['.bin', '.iso'], color: 'psx' }
+  const currentConsole = getConsoleById(consoleType) || { 
+    name: 'Unknown Console', 
+    icon: '🎮', 
+    files: [], 
+    color: 'nes' 
   };
-
-  const currentConsole = consoleInfo[consoleType] || { name: 'Unknown Console', icon: '🎮', files: [], color: 'nes' };
 
   useEffect(() => {
     // Create particles effect
@@ -227,18 +224,6 @@ const EmulatorPage = () => {
     }, 300);
   };
 
-  const getConsoleCore = (console) => {
-    const cores = {
-      'nes': 'fceumm',
-      'snes': 'snes9x',
-      'gb': 'gambatte',
-      'gba': 'mgba',
-      'genesis': 'genesis_plus_gx',
-      'psx': 'pcsx_rearmed'
-    };
-    return cores[console] || 'mgba';
-  };
-
   const goHome = () => {
     navigate('/');
   };
@@ -378,13 +363,7 @@ const EmulatorPage = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <p>© 2025 Retro Console Emulator • Made with ❤️ by <a href="https://github.com/dmthong181096" target="_blank" rel="noopener noreferrer" className="author">Thong Doan</a></p>
-          <p className="footer-note">Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

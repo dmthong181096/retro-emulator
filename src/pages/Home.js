@@ -1,53 +1,11 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAllConsoles } from '../config/Config';
+import Footer from '../components/Footer';
 
 const Home = () => {
   const navigate = useNavigate();
-
-  const consoles = [
-    {
-      id: 'nes',
-      name: 'Nintendo Entertainment System',
-      icon: '🎮',
-      description: 'Console huyền thoại với những game kinh điển như Mario, Zelda',
-      supportedFiles: ['.nes']
-    },
-    {
-      id: 'snes',
-      name: 'Super Nintendo',
-      icon: '🕹️',
-      description: 'Thế hệ tiếp theo với đồ họa 16-bit tuyệt vời',
-      supportedFiles: ['.smc', '.sfc']
-    },
-    {
-      id: 'gb',
-      name: 'Game Boy',
-      icon: '📱',
-      description: 'Console cầm tay huyền thoại của Nintendo',
-      supportedFiles: ['.gb', '.gbc']
-    },
-    {
-      id: 'gba',
-      name: 'Game Boy Advance',
-      icon: '🎯',
-      description: 'Game Boy với đồ họa 32-bit và màn hình màu',
-      supportedFiles: ['.gba']
-    },
-    {
-      id: 'genesis',
-      name: 'Sega Genesis',
-      icon: '⚡',
-      description: 'Console 16-bit của Sega với Sonic the Hedgehog',
-      supportedFiles: ['.md', '.gen']
-    },
-    {
-      id: 'psx',
-      name: 'PlayStation 1',
-      icon: '💿',
-      description: 'Console 32-bit đầu tiên của Sony',
-      supportedFiles: ['.bin', '.iso']
-    }
-  ];
+  const consoles = getAllConsoles();
 
   const handleConsoleClick = (consoleId) => {
     navigate(`/emulator/${consoleId}`);
@@ -125,7 +83,7 @@ const Home = () => {
                 </div>
                 <div className="supported-files">
                   <div className="files-label">📁 Định dạng hỗ trợ</div>
-                  <div className="files-list">{console.supportedFiles.join(', ')}</div>
+                  <div className="files-list">{console.files.join(', ')}</div>
                 </div>
               </div>
             </div>
@@ -133,13 +91,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <p>© 2025 Retro Console Emulator • Made with ❤️ by <a href="https://github.com/dmthong181096" target="_blank" rel="noopener noreferrer" className="author">Thong Doan</a></p>
-          <p className="footer-note">Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
