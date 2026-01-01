@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getConsoleById, getConsoleCore } from '../config/Config';
-import Footer from '../components/Footer';
+import Layout from '../components/Layout';
+import FloatingElements from '../components/FloatingElements';
+import EmulatorControls from '../components/EmulatorControls';
+import ErrorMessage from '../components/ErrorMessage';
 
 const EmulatorPage = () => {
   const { console: consoleType } = useParams();
@@ -9,6 +12,7 @@ const EmulatorPage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [isGameLoaded, setIsGameLoaded] = useState(false);
+  const [error, setError] = useState(null);
 
   const currentConsole = getConsoleById(consoleType) || { 
     name: 'Unknown Console', 
@@ -18,25 +22,6 @@ const EmulatorPage = () => {
   };
 
   useEffect(() => {
-    // Create particles effect
-    const createParticles = () => {
-      const particlesContainer = document.getElementById('particles');
-      if (!particlesContainer) return;
-      
-      const particleCount = 30;
-
-      for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.left = Math.random() * 100 + '%';
-        particle.style.animationDelay = Math.random() * 8 + 's';
-        particle.style.animationDuration = (Math.random() * 3 + 5) + 's';
-        particlesContainer.appendChild(particle);
-      }
-    };
-
-    createParticles();
-
     // Add fade-in animation to main elements
     const animateElements = () => {
       const header = document.querySelector('.emulator-header');
@@ -62,18 +47,14 @@ const EmulatorPage = () => {
     // Start animations after a short delay
     setTimeout(animateElements, 100);
 
-    // Cleanup function - runs when component unmounts OR when dependencies change
+    // Cleanup function
     const cleanup = () => {
       console.log('🧹 Cleaning up EmulatorJS...');
       
       // Reset states
       setIsGameStarted(false);
       setIsGameLoaded(false);
-      
-      const particlesContainer = document.getElementById('particles');
-      if (particlesContainer) {
-        particlesContainer.innerHTML = '';
-      }
+      setError(null);
       
       // Cleanup game container (iframe will be destroyed automatically)
       const gameContainer = document.getElementById('gameContainer');
@@ -98,18 +79,6 @@ const EmulatorPage = () => {
     return cleanup;
   }, []);
 
-  // Additional cleanup when component unmounts (backup)
-  useEffect(() => {
-    return () => {
-      console.log('🚪 Component unmounting - final cleanup');
-      // Simple cleanup since we're using iframe isolation
-      const gameContainer = document.getElementById('gameContainer');
-      if (gameContainer) {
-        gameContainer.innerHTML = '';
-      }
-    };
-  }, []);
-
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -119,11 +88,12 @@ const EmulatorPage = () => {
 
   const startGame = () => {
     if (!selectedFile) {
-      alert('Vui lòng chọn ROM file trước!');
+      setError('Vui lòng chọn ROM file trước khi bắt đầu chơi!');
       return;
     }
 
     setIsGameStarted(true);
+    setError(null);
     
     // Add delay to ensure DOM is ready
     setTimeout(() => {
@@ -148,54 +118,20 @@ const EmulatorPage = () => {
         iframe.style.borderRadius = '15px';
         iframe.style.backgroundColor = '#000';
         
-        // Create HTML content for iframe
-        const iframeContent = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Emulator</title>
-            <style>
-              body { margin: 0; padding: 0; background: #000; }
-              #emulator { width: 100%; height: 480px; }
-            </style>
-          </head>
-          <body>
-            <div id="emulator"></div>
-            <script>
-              window.EJS_player = "#emulator";
-              window.EJS_core = "${getConsoleCore(consoleType)}";
-              window.EJS_pathtodata = "${window.location.origin}/emulatorjs/";
-              window.EJS_gameUrl = "${gameUrl}";
-              window.EJS_language = "en-US";
-              window.EJS_startOnLoaded = true;
-              window.EJS_fullscreenOnLoad = false;
-              window.EJS_gameID = "${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}";
-              window.EJS_gameName = "${selectedFile.name}";
-              window.EJS_width = "100%";
-              window.EJS_height = "480px";
-              
-              window.EJS_onGameStart = function() {
-                console.log('🎉 Game started in iframe!');
-                parent.postMessage({type: 'gameStarted'}, '*');
-              };
-              
-              window.EJS_onError = function(error) {
-                console.error('❌ EmulatorJS Error in iframe:', error);
-                parent.postMessage({type: 'gameError', error: error}, '*');
-              };
-            </script>
-            <script src="${window.location.origin}/emulatorjs/loader.js?t=${Date.now()}"></script>
-          </body>
-          </html>
-        `;
+        // Create URL with parameters
+        const params = new URLSearchParams({
+          gameUrl: gameUrl,
+          core: getConsoleCore(consoleType),
+          gameId: `${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`,
+          gameName: selectedFile.name
+        });
         
-        // Set iframe content
+        iframe.src = `/emulator-iframe.html?${params.toString()}`;
+        
         iframe.onload = function() {
           console.log('✅ Iframe loaded successfully');
         };
         
-        iframe.srcdoc = iframeContent;
         gameContainer.appendChild(iframe);
         
         // Listen for messages from iframe
@@ -203,10 +139,12 @@ const EmulatorPage = () => {
           if (event.data.type === 'gameStarted') {
             console.log('🎉 Game started successfully in iframe!');
             setIsGameLoaded(true);
+            setError(null);
           } else if (event.data.type === 'gameError') {
             console.error('❌ Game error in iframe:', event.data.error);
             setIsGameStarted(false);
             setIsGameLoaded(false);
+            setError(`Không thể tải game: ${event.data.error || 'Lỗi không xác định'}`);
           }
         };
         
@@ -220,8 +158,15 @@ const EmulatorPage = () => {
       } catch (error) {
         console.error('❌ Error starting game:', error);
         setIsGameStarted(false);
+        setError(`Lỗi khi khởi tạo game: ${error.message || 'Lỗi không xác định'}`);
       }
     }, 300);
+  };
+
+  const handleCloseError = () => {
+    setError(null);
+    setIsGameStarted(false);
+    setIsGameLoaded(false);
   };
 
   const goHome = () => {
@@ -229,12 +174,12 @@ const EmulatorPage = () => {
   };
 
   const renderGameContainer = () => {
-    if (isGameStarted) {
+    if (isGameStarted && selectedFile) {
       return (
         <div className="game-placeholder">
           <div className="game-placeholder-icon">🔄</div>
-          <h3>Đang tải game...</h3>
-          <p>Vui lòng đợi trong giây lát</p>
+          <h3>Đang tải game: {selectedFile.name}</h3>
+          <p>Vui lòng đợi trong giây lát...</p>
         </div>
       );
     }
@@ -259,112 +204,76 @@ const EmulatorPage = () => {
   };
 
   return (
-    <div>
-      {/* Floating background elements */}
-      <div className="floating-elements">
-        <div className="floating-element">{currentConsole.icon}</div>
-        <div className="floating-element">🎮</div>
-        <div className="floating-element">⚡</div>
-        <div className="floating-element">🎯</div>
+    <Layout>
+      <FloatingElements elements={[currentConsole.icon, '🎮', '⚡', '🎯']} />
+
+      <div className="emulator-header">
+        <h1 className={`console-title ${currentConsole.color}`}>
+          {currentConsole.icon} {currentConsole.name}
+        </h1>
+        <p className="console-subtitle">Chọn ROM file và nhấn "Chơi Game" để bắt đầu</p>
+        <p className="supported-formats-text">Hỗ trợ: {currentConsole.files.join(', ')}</p>
       </div>
 
-      {/* Particles */}
-      <div className="particles" id="particles"></div>
+      <div className="main-content">
+        <div className="emulator-container">
+          <EmulatorControls
+            selectedFile={selectedFile}
+            isGameLoaded={isGameLoaded}
+            isGameStarted={isGameStarted}
+            currentConsole={currentConsole}
+            onFileSelect={handleFileSelect}
+            onStartGame={startGame}
+            onGoHome={goHome}
+          />
 
-      <div className="container">
-        <div className="emulator-header">
-          <h1 className={`console-title ${currentConsole.color}`}>
-            {currentConsole.icon} {currentConsole.name}
-          </h1>
-          <p className="console-subtitle">Chọn ROM file và nhấn "Chơi Game" để bắt đầu</p>
-          <p className="supported-formats-text">Hỗ trợ: {currentConsole.files.join(', ')}</p>
+          <div className="game-container" id="gameContainer">
+            {renderGameContainer()}
+          </div>
         </div>
 
-        <div className="main-content">
-          <div className="emulator-container">
-            <div className="controls-section">
-              <div className="file-input-wrapper">
-                <input 
-                  type="file" 
-                  id="romFile" 
-                  className="file-input" 
-                  accept={currentConsole.files.join(',')} 
-                  onChange={handleFileSelect}
-                  disabled={isGameLoaded}
-                />
-                <label 
-                  htmlFor="romFile" 
-                  className={`file-input-label ${isGameLoaded ? 'disabled' : ''}`}
-                >
-                  {selectedFile ? (
-                    <>✅ {selectedFile.name.length > 15 ? selectedFile.name.substring(0, 15) + '...' : selectedFile.name}</>
-                  ) : (
-                    <>📁 {isGameLoaded ? 'Game đã tải' : 'Chọn ROM File'}</>
-                  )}
-                </label>
+        <div className="instructions">
+          <h3>🎮 Hướng dẫn sử dụng:</h3>
+          <div className="instructions-grid">
+            <div className="instruction-item">
+              <div className="instruction-icon">📁</div>
+              <div>
+                <strong>Chọn ROM:</strong> Click "Chọn ROM File" và chọn file game
               </div>
-              
-              <button 
-                className="control-button play-button" 
-                onClick={startGame} 
-                disabled={!selectedFile || isGameStarted}
-              >
-                {isGameStarted ? (isGameLoaded ? '🎮 Đang chơi' : '🔄 Đang tải...') : '🎮 Chơi Game'}
-              </button>
-              
-              <button className="control-button home" onClick={goHome}>
-                🏠 Trang chủ
-              </button>
             </div>
-
-            <div className="game-container" id="gameContainer">
-              {renderGameContainer()}
+            <div className="instruction-item">
+              <div className="instruction-icon">🎮</div>
+              <div>
+                <strong>Khởi động:</strong> Nhấn "Chơi Game" để bắt đầu
+              </div>
+            </div>
+            <div className="instruction-item">
+              <div className="instruction-icon">⌨️</div>
+              <div>
+                <strong>Điều khiển:</strong> Arrow keys, Z (A), X (B), Enter (Start)
+              </div>
+            </div>
+            <div className="instruction-item">
+              <div className="instruction-icon">🖥️</div>
+              <div>
+                <strong>Toàn màn hình:</strong> Nhấn F11 hoặc menu trong game
+              </div>
             </div>
           </div>
 
-          <div className="instructions">
-            <h3>🎮 Hướng dẫn sử dụng:</h3>
-            <div className="instructions-grid">
-              <div className="instruction-item">
-                <div className="instruction-icon">📁</div>
-                <div>
-                  <strong>Chọn ROM:</strong> Click "Chọn ROM File" và chọn file game
-                </div>
-              </div>
-              <div className="instruction-item">
-                <div className="instruction-icon">🎮</div>
-                <div>
-                  <strong>Khởi động:</strong> Nhấn "Chơi Game" để bắt đầu
-                </div>
-              </div>
-              <div className="instruction-item">
-                <div className="instruction-icon">⌨️</div>
-                <div>
-                  <strong>Điều khiển:</strong> Arrow keys, Z (A), X (B), Enter (Start)
-                </div>
-              </div>
-              <div className="instruction-item">
-                <div className="instruction-icon">🖥️</div>
-                <div>
-                  <strong>Toàn màn hình:</strong> Nhấn F11 hoặc menu trong game
-                </div>
-              </div>
-            </div>
-
-            <div className="legal-notice">
-              <h4>⚖️ Lưu ý bản quyền</h4>
-              <ul>
-                <li>Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</li>
-                <li>Tuân thủ luật bản quyền trong khu vực của bạn</li>
-                <li>Tôn trọng quyền sở hữu trí tuệ của nhà phát triển</li>
-              </ul>
-            </div>
+          <div className="legal-notice">
+            <h4>⚖️ Lưu ý bản quyền</h4>
+            <ul>
+              <li>Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</li>
+              <li>Tuân thủ luật bản quyền trong khu vực của bạn</li>
+              <li>Tôn trọng quyền sở hữu trí tuệ của nhà phát triển</li>
+            </ul>
           </div>
         </div>
       </div>
 
-      <Footer />
-    </div>
+      <ErrorMessage error={error} onClose={handleCloseError} />
+    </Layout>
   );
 };
 
