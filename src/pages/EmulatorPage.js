@@ -169,6 +169,20 @@ const EmulatorPage = () => {
     setIsGameLoaded(false);
   };
 
+  const handleTestError = () => {
+    const testErrors = [
+      'File ROM không hợp lệ hoặc bị hỏng',
+      'Không thể tải core emulator cho console này',
+      'Lỗi kết nối mạng khi tải EmulatorJS',
+      'File ROM quá lớn hoặc định dạng không được hỗ trợ',
+      'Trình duyệt không hỗ trợ WebAssembly',
+      'Lỗi bộ nhớ: Không đủ RAM để chạy game'
+    ];
+    
+    const randomError = testErrors[Math.floor(Math.random() * testErrors.length)];
+    setError(randomError);
+  };
+
   const goHome = () => {
     navigate('/');
   };
@@ -225,6 +239,7 @@ const EmulatorPage = () => {
             onFileSelect={handleFileSelect}
             onStartGame={startGame}
             onGoHome={goHome}
+            onTestError={handleTestError}
           />
 
           <div className="game-container" id="gameContainer">

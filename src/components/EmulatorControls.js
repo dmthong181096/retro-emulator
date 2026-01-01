@@ -7,7 +7,8 @@ const EmulatorControls = ({
   currentConsole, 
   onFileSelect, 
   onStartGame, 
-  onGoHome 
+  onGoHome,
+  onTestError 
 }) => {
   return (
     <div className="controls-section">
@@ -43,6 +44,13 @@ const EmulatorControls = ({
       <button className="control-button home" onClick={onGoHome}>
         🏠 Trang chủ
       </button>
+
+      {/* Test Error Button - Only in development
+      {process.env.NODE_ENV === 'development' && (
+        <button className="control-button test-error" onClick={onTestError}>
+          ⚠️ Test Error
+        </button>
+      )} */}
     </div>
   );
 };
