@@ -49,7 +49,6 @@ const EmulatorPage = () => {
 
     // Cleanup function
     const cleanup = () => {
-      console.log('🧹 Cleaning up EmulatorJS...');
       
       // Reset states
       setIsGameStarted(false);
@@ -97,12 +96,9 @@ const EmulatorPage = () => {
     
     // Add delay to ensure DOM is ready
     setTimeout(() => {
-      try {
-        console.log('🚀 Starting game:', selectedFile.name);
-        
+      try {        
         // Create object URL for the file
         const gameUrl = URL.createObjectURL(selectedFile);
-        console.log('🔗 Game URL created:', gameUrl);
         
         // Clear any existing content
         const gameContainer = document.getElementById('gameContainer');
@@ -129,7 +125,7 @@ const EmulatorPage = () => {
         iframe.src = `/emulator-iframe.html?${params.toString()}`;
         
         iframe.onload = function() {
-          console.log('✅ Iframe loaded successfully');
+
         };
         
         gameContainer.appendChild(iframe);
@@ -137,7 +133,6 @@ const EmulatorPage = () => {
         // Listen for messages from iframe
         const messageHandler = (event) => {
           if (event.data.type === 'gameStarted') {
-            console.log('🎉 Game started successfully in iframe!');
             setIsGameLoaded(true);
             setError(null);
           } else if (event.data.type === 'gameError') {

@@ -40,7 +40,6 @@
     
     // Set up callbacks
     window.EJS_onGameStart = function() {
-      console.log('🎉 Game started in iframe!');
       parent.postMessage({type: 'gameStarted'}, '*');
     };
     
