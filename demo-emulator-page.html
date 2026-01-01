@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Nintendo - Retro Console Emulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%),
+                linear-gradient(135deg, #0f0f23 0%, #1a1a2e 25%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .emulator-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .console-title {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .console-title.snes {
+            background: linear-gradient(45deg, #9370db, #ba55d3, #dda0dd);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        .console-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .emulator-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-section {
+            display: flex;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(147, 112, 219, 0.8));
+            color: white;
+            padding: 0.8rem 1.4rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            border: 1px solid rgba(138, 43, 226, 0.5);
+            font-size: 1rem;
+        }
+
+        .file-input-label:hover {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 1), rgba(147, 112, 219, 1));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(138, 43, 226, 0.3);
+        }
+
+        .control-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 0.8rem 1.4rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-button.home {
+            background: linear-gradient(135deg, rgba(255, 69, 0, 0.8), rgba(255, 99, 71, 0.8));
+            border-color: rgba(255, 69, 0, 0.5);
+        }
+
+        .control-button.home:hover {
+            background: linear-gradient(135deg, rgba(255, 69, 0, 1), rgba(255, 99, 71, 1));
+            box-shadow: 0 10px 20px rgba(255, 69, 0, 0.3);
+        }
+
+        .game-container {
+            width: 100%;
+            height: 480px;
+            background: #000;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(138, 43, 226, 0.3);
+        }
+
+        .game-placeholder {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .game-placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .instructions h3 {
+            color: #9370db;
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+        }
+
+        .instructions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .instruction-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        .instruction-icon {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(147, 112, 219, 0.3));
+            border-radius: 8px;
+            padding: 0.5rem;
+            font-size: 1.1rem;
+            min-width: 36px;
+            text-align: center;
+            margin-top: 0.1rem;
+        }
+
+        .legal-notice {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 235, 59, 0.05));
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-top: 1.5rem;
+        }
+
+        .legal-notice h4 {
+            color: #ffc107;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.05rem;
+        }
+
+        .legal-notice ul {
+            list-style: none;
+            padding-left: 0;
+            font-size: 0.9rem;
+        }
+
+        .legal-notice li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.3rem;
+            position: relative;
+        }
+
+        .legal-notice li::before {
+            content: "•";
+            color: #ffc107;
+            position: absolute;
+            left: 0;
+        }
+
+        .floating-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-element {
+            position: absolute;
+            opacity: 0.05;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .floating-element:nth-child(1) { top: 15%; left: 5%; animation-delay: 0s; }
+        .floating-element:nth-child(2) { top: 25%; right: 5%; animation-delay: 2s; }
+        .floating-element:nth-child(3) { bottom: 25%; left: 10%; animation-delay: 4s; }
+        .floating-element:nth-child(4) { bottom: 15%; right: 15%; animation-delay: 6s; }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(180deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .console-title {
+                font-size: 2.2rem;
+            }
+            
+            .controls-section {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+            
+            .instructions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .game-container {
+                height: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating background elements -->
+    <div class="floating-elements">
+        <div class="floating-element">🕹️</div>
+        <div class="floating-element">🎮</div>
+        <div class="floating-element">⚡</div>
+        <div class="floating-element">🎯</div>
+    </div>
+
+    <div class="container">
+        <div class="emulator-header">
+            <h1 class="console-title snes">
+                🕹️ Super Nintendo
+            </h1>
+            <p class="console-subtitle">Chọn ROM file và nhấn "Chơi Game" để bắt đầu</p>
+        </div>
+
+        <div class="main-content">
+            <div class="emulator-container">
+                <div class="controls-section">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="romFile" class="file-input" accept=".smc,.sfc" onchange="handleFileSelect(event)">
+                        <label for="romFile" class="file-input-label">
+                            📁 Chọn ROM File
+                        </label>
+                    </div>
+                    
+                    <button class="control-button" onclick="startGame()" id="playButton" disabled>
+                        🎮 Chơi Game
+                    </button>
+                    
+                    <button class="control-button home" onclick="goBack()">
+                        🏠 Trang chủ
+                    </button>
+                </div>
+
+                <div class="game-container" id="gameContainer">
+                    <div class="game-placeholder">
+                        <div class="game-placeholder-icon">🕹️</div>
+                        <h3>Chọn ROM file để bắt đầu chơi</h3>
+                        <p>Hỗ trợ định dạng: .smc, .sfc</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h3>🎮 Hướng dẫn sử dụng:</h3>
+                <div class="instructions-grid">
+                    <div class="instruction-item">
+                        <div class="instruction-icon">📁</div>
+                        <div>
+                            <strong>Chọn ROM:</strong> Click "Chọn ROM File" và chọn file game
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="instruction-icon">🎮</div>
+                        <div>
+                            <strong>Khởi động:</strong> Nhấn "Chơi Game" để bắt đầu
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="instruction-icon">⌨️</div>
+                        <div>
+                            <strong>Điều khiển:</strong> Arrow keys, Z (A), X (B), Enter (Start)
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <div class="instruction-icon">🖥️</div>
+                        <div>
+                            <strong>Toàn màn hình:</strong> Nhấn F11 hoặc menu trong game
+                        </div>
+                    </div>
+                </div>
+
+                <div class="legal-notice">
+                    <h4>⚖️ Lưu ý bản quyền</h4>
+                    <ul>
+                        <li>Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</li>
+                        <li>Tuân thủ luật bản quyền trong khu vực của bạn</li>
+                        <li>Tôn trọng quyền sở hữu trí tuệ của nhà phát triển</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                document.getElementById('playButton').disabled = false;
+                
+                // Update placeholder
+                const placeholder = document.querySelector('.game-placeholder');
+                placeholder.innerHTML = `
+                    <div class="game-placeholder-icon">✅</div>
+                    <h3>ROM đã được chọn: ${file.name}</h3>
+                    <p>Nhấn "Chơi Game" để bắt đầu</p>
+                `;
+            }
+        }
+
+        function startGame() {
+            if (!selectedFile) {
+                alert('Vui lòng chọn ROM file trước!');
+                return;
+            }
+
+            // Simulate game loading
+            const gameContainer = document.getElementById('gameContainer');
+            gameContainer.innerHTML = `
+                <div class="game-placeholder">
+                    <div class="game-placeholder-icon">🔄</div>
+                    <h3>Đang tải game...</h3>
+                    <p>Vui lòng đợi trong giây lát</p>
+                </div>
+            `;
+
+            // In real implementation, this would initialize EmulatorJS
+            setTimeout(() => {
+                gameContainer.innerHTML = `
+                    <div class="game-placeholder">
+                        <div class="game-placeholder-icon">🎮</div>
+                        <h3>Game đang chạy!</h3>
+                        <p>(Đây là demo - EmulatorJS sẽ được tích hợp ở đây)</p>
+                    </div>
+                `;
+            }, 2000);
+        }
+
+        function goBack() {
+            // In real implementation, this would navigate back
+            alert('Quay lại trang chủ (Demo)');
+        }
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add hover effects to buttons
+            const buttons = document.querySelectorAll('.control-button, .file-input-label');
+            buttons.forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                button.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
