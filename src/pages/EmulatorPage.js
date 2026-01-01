@@ -40,6 +40,31 @@ const EmulatorPage = () => {
 
     createParticles();
 
+    // Add fade-in animation to main elements
+    const animateElements = () => {
+      const header = document.querySelector('.emulator-header');
+      const container = document.querySelector('.emulator-container');
+      const instructions = document.querySelector('.instructions');
+      
+      const elements = [header, container, instructions].filter(el => el);
+      
+      elements.forEach((element, index) => {
+        if (element) {
+          element.style.opacity = '0';
+          element.style.transform = 'translateY(30px)';
+          
+          setTimeout(() => {
+            element.style.transition = 'all 0.8s ease-out';
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+          }, index * 150);
+        }
+      });
+    };
+
+    // Start animations after a short delay
+    setTimeout(animateElements, 100);
+
     // Cleanup function - runs when component unmounts OR when dependencies change
     const cleanup = () => {
       console.log('🧹 Cleaning up EmulatorJS...');
