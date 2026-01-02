@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import FloatingElements from '../components/FloatingElements';
 import EmulatorControls from '../components/EmulatorControls';
 import ErrorMessage from '../components/ErrorMessage';
+import Instructions from '../components/Instructions';
 
 const EmulatorPage = () => {
   const { console: consoleType } = useParams();
@@ -246,44 +247,7 @@ const EmulatorPage = () => {
           </div>
         </div>
 
-        <div className="instructions">
-          <h3>🎮 Hướng dẫn sử dụng:</h3>
-          <div className="instructions-grid">
-            <div className="instruction-item">
-              <div className="instruction-icon">📁</div>
-              <div>
-                <strong>Chọn ROM:</strong> Click "Chọn ROM File" và chọn file game
-              </div>
-            </div>
-            <div className="instruction-item">
-              <div className="instruction-icon">🎮</div>
-              <div>
-                <strong>Khởi động:</strong> Nhấn "Chơi Game" để bắt đầu
-              </div>
-            </div>
-            <div className="instruction-item">
-              <div className="instruction-icon">⌨️</div>
-              <div>
-                <strong>Điều khiển:</strong> Arrow keys, Z (A), X (B), Enter (Start)
-              </div>
-            </div>
-            <div className="instruction-item">
-              <div className="instruction-icon">🖥️</div>
-              <div>
-                <strong>Toàn màn hình:</strong> Nhấn F11 hoặc menu trong game
-              </div>
-            </div>
-          </div>
-
-          <div className="legal-notice">
-            <h4>⚖️ Lưu ý bản quyền</h4>
-            <ul>
-              <li>Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</li>
-              <li>Tuân thủ luật bản quyền trong khu vực của bạn</li>
-              <li>Tôn trọng quyền sở hữu trí tuệ của nhà phát triển</li>
-            </ul>
-          </div>
-        </div>
+        <Instructions />
       </div>
 
       <ErrorMessage error={error} onClose={handleCloseError} />
