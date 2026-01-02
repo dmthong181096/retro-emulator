@@ -1,7 +1,15 @@
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Footer from './Footer';
 
 const Layout = ({ children }) => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Scroll to top when route changes
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   useEffect(() => {
     // Create particles effect - shared for all pages
     const createParticles = () => {
