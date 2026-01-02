@@ -1139,3 +1139,153 @@ html {
     font-size: 1rem;
   }
 }
+/* Performance Monitor */
+.performance-monitor {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9997;
+}
+
+.performance-toggle {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.performance-toggle:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.performance-panel {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 280px;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+.performance-panel.warning {
+  border-color: rgba(255, 193, 7, 0.5);
+}
+
+.performance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.performance-header span {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.performance-header button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.performance-header button:hover {
+  color: white;
+}
+
+.performance-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.metric-value {
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-good {
+  color: #4ecdc4;
+}
+
+.status-warning {
+  color: #ffc107;
+}
+
+.performance-tips {
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tip {
+  color: #ffc107;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.info {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  margin-bottom: 0.3rem;
+  font-style: italic;
+}
+
+.performance-monitor.hidden .performance-panel {
+  display: none;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .performance-monitor {
+    top: 10px;
+    right: 10px;
+  }
+  
+  .performance-panel {
+    width: 250px;
+    right: -10px;
+  }
+  
+  .performance-toggle {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+}

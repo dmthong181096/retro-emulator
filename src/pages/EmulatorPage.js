@@ -7,6 +7,7 @@ import EmulatorControls from '../components/EmulatorControls';
 import ErrorMessage from '../components/ErrorMessage';
 import Instructions from '../components/Instructions';
 import FloatingFullscreenButton from '../components/FloatingFullscreenButton';
+import PerformanceMonitor from '../components/PerformanceMonitor';
 
 const EmulatorPage = () => {
   const { console: consoleType } = useParams();
@@ -15,6 +16,7 @@ const EmulatorPage = () => {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [isGameLoaded, setIsGameLoaded] = useState(false);
   const [error, setError] = useState(null);
+  const [showFloatingElements, setShowFloatingElements] = useState(true);
   const [showFloatingButton, setShowFloatingButton] = useState(false);
 
   const currentConsole = getConsoleById(consoleType) || { 
@@ -144,6 +146,9 @@ const EmulatorPage = () => {
             setIsGameLoaded(true);
             setError(null);
             
+            // Hide floating elements when game starts
+            setShowFloatingElements(false);
+            
             // Add double-click fullscreen to iframe
             iframe.addEventListener('dblclick', () => {
               iframe.contentWindow.postMessage({type: 'requestFullscreen'}, '*');
@@ -157,6 +162,7 @@ const EmulatorPage = () => {
           } else if (event.data.type === 'gameError') {
             setIsGameStarted(false);
             setIsGameLoaded(false);
+            setShowFloatingElements(true); // Show particles again when error
             setError(`Không thể tải game: ${event.data.error || 'Lỗi không xác định'}`);
           }
         };
@@ -179,6 +185,7 @@ const EmulatorPage = () => {
     setError(null);
     setIsGameStarted(false);
     setIsGameLoaded(false);
+    setShowFloatingElements(true); // Show particles again when error
   };
 
   const handleTestError = () => {
@@ -202,7 +209,6 @@ const EmulatorPage = () => {
   // Mobile detection function
   const isMobileDevice = () => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           (window.innerWidth <= 768) ||
            ('ontouchstart' in window);
   };
 
@@ -257,7 +263,10 @@ const EmulatorPage = () => {
 
   return (
     <Layout>
-      <FloatingElements elements={[currentConsole.icon, '🎮', '⚡', '🎯']} />
+      {/* Only show floating elements when game is not loaded */}
+      {showFloatingElements && (
+        <FloatingElements elements={[currentConsole.icon, '🎮', '⚡', '🎯']} />
+      )}
 
       <div className="emulator-header">
         <h1 className={`console-title ${currentConsole.color}`}>
@@ -294,6 +303,9 @@ const EmulatorPage = () => {
       {showFloatingButton && (
         <FloatingFullscreenButton onToggleFullscreen={handleToggleFullscreen} />
       )}
+      
+      {/* Performance Monitor */}
+      {/* <PerformanceMonitor isGameRunning={isGameLoaded} /> */}
     </Layout>
   );
 };
