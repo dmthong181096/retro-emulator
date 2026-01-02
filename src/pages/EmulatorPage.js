@@ -135,8 +135,13 @@ const EmulatorPage = () => {
           if (event.data.type === 'gameStarted') {
             setIsGameLoaded(true);
             setError(null);
+            
+            // Add double-click fullscreen to iframe
+            iframe.addEventListener('dblclick', () => {
+              iframe.contentWindow.postMessage({type: 'requestFullscreen'}, '*');
+            });
+            
           } else if (event.data.type === 'gameError') {
-            console.error('❌ Game error in iframe:', event.data.error);
             setIsGameStarted(false);
             setIsGameLoaded(false);
             setError(`Không thể tải game: ${event.data.error || 'Lỗi không xác định'}`);
@@ -151,7 +156,6 @@ const EmulatorPage = () => {
         };
         
       } catch (error) {
-        console.error('❌ Error starting game:', error);
         setIsGameStarted(false);
         setError(`Lỗi khi khởi tạo game: ${error.message || 'Lỗi không xác định'}`);
       }
