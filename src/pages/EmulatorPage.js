@@ -6,6 +6,7 @@ import FloatingElements from '../components/FloatingElements';
 import EmulatorControls from '../components/EmulatorControls';
 import ErrorMessage from '../components/ErrorMessage';
 import Instructions from '../components/Instructions';
+import FloatingFullscreenButton from '../components/FloatingFullscreenButton';
 
 const EmulatorPage = () => {
   const { console: consoleType } = useParams();
@@ -14,6 +15,7 @@ const EmulatorPage = () => {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [isGameLoaded, setIsGameLoaded] = useState(false);
   const [error, setError] = useState(null);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
 
   const currentConsole = getConsoleById(consoleType) || { 
     name: 'Unknown Console', 
@@ -95,6 +97,11 @@ const EmulatorPage = () => {
     setIsGameStarted(true);
     setError(null);
     
+    // Scroll to emulator immediately for both desktop and mobile
+    setTimeout(() => {
+      scrollToEmulator();
+    }, 500); // Small delay to let the loading state render first
+    
     // Add delay to ensure DOM is ready
     setTimeout(() => {
       try {        
@@ -142,6 +149,11 @@ const EmulatorPage = () => {
               iframe.contentWindow.postMessage({type: 'requestFullscreen'}, '*');
             });
             
+            // Show floating fullscreen button for mobile when game loads
+            if (isMobileDevice()) {
+              setShowFloatingButton(true);
+            }
+            
           } else if (event.data.type === 'gameError') {
             setIsGameStarted(false);
             setIsGameLoaded(false);
@@ -185,6 +197,32 @@ const EmulatorPage = () => {
 
   const goHome = () => {
     navigate('/');
+  };
+
+  // Mobile detection function
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768) ||
+           ('ontouchstart' in window);
+  };
+
+  // Scroll to center emulator on desktop
+  const scrollToEmulator = () => {
+    const emulatorContainer = document.querySelector('.emulator-container');
+    if (emulatorContainer) {
+      emulatorContainer.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  };
+
+  // Toggle fullscreen for floating button
+  const handleToggleFullscreen = () => {
+    const iframe = document.querySelector('#gameContainer iframe');
+    if (iframe) {
+      iframe.contentWindow.postMessage({type: 'requestFullscreen'}, '*');
+    }
   };
 
   const renderGameContainer = () => {
@@ -251,6 +289,11 @@ const EmulatorPage = () => {
       </div>
 
       <ErrorMessage error={error} onClose={handleCloseError} />
+      
+      {/* Floating Fullscreen Button for Mobile */}
+      {showFloatingButton && (
+        <FloatingFullscreenButton onToggleFullscreen={handleToggleFullscreen} />
+      )}
     </Layout>
   );
 };
