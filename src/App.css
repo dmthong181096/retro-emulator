@@ -504,9 +504,13 @@ body {
   font-weight: 600;
   border: 1px solid rgba(138, 43, 226, 0.5);
   font-size: 1rem;
-  min-width: 180px;
+  width: 200px;
+  height: 50px;
   justify-content: center;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-input-label:hover:not(.disabled) {
@@ -536,17 +540,21 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-size: 1rem;
-  min-width: 150px;
+  width: 180px;
+  height: 50px;
   justify-content: center;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .control-button.play-button {
-  min-width: 180px;
+  /* Fixed width applied from parent .control-button */
 }
 
 .control-button.home {
-  min-width: 140px;
+  /* Fixed width applied from parent .control-button */
 }
 
 .control-button.test-error {
@@ -910,61 +918,310 @@ body {
     transform: translateY(0) scale(1);
   }
 }
-/* Collapsible Instructions */
-.instructions-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
-}
-
-.instructions-header:hover {
+/* Unified Control Panel */
+.control-panel {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
-  margin: 0 -1rem 1rem -1rem;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
-.instructions-header h3 {
-  margin: 0;
-  color: white;
-  font-size: 1.2rem;
-  font-weight: 600;
+.control-row {
   display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 0.8rem 1.2rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.9rem;
+  width: 140px;
+  height: 48px;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
 }
 
-.instructions-content {
-  animation: slideDown 0.3s ease-out;
+.control-btn:hover:not(.disabled):not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.control-btn.file-btn {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(147, 112, 219, 0.8));
+  border-color: rgba(138, 43, 226, 0.5);
+}
+
+.control-btn.file-btn:hover:not(.disabled) {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 1), rgba(147, 112, 219, 1));
+  box-shadow: 0 8px 20px rgba(138, 43, 226, 0.3);
+}
+
+.control-btn.file-btn.disabled {
+  background: linear-gradient(135deg, rgba(100, 100, 100, 0.8), rgba(120, 120, 120, 0.8));
+  border-color: rgba(100, 100, 100, 0.5);
+}
+
+.control-btn.play-btn {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.8), rgba(69, 183, 209, 0.8));
+  border-color: rgba(78, 205, 196, 0.5);
+}
+
+.control-btn.play-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 1), rgba(69, 183, 209, 1));
+  box-shadow: 0 8px 20px rgba(78, 205, 196, 0.3);
+}
+
+.control-btn.home-btn {
+  background: linear-gradient(135deg, rgba(255, 69, 0, 0.8), rgba(255, 99, 71, 0.8));
+  border-color: rgba(255, 69, 0, 0.5);
+}
+
+.control-btn.home-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 69, 0, 1), rgba(255, 99, 71, 1));
+  box-shadow: 0 8px 20px rgba(255, 69, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.control-btn.info-btn {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.8), rgba(255, 235, 59, 0.8));
+  border-color: rgba(255, 193, 7, 0.5);
+  color: #000;
+  font-weight: 700;
+}
+
+.control-btn.info-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 1), rgba(255, 235, 59, 1));
+  box-shadow: 0 8px 20px rgba(255, 193, 7, 0.3);
+  transform: translateY(-2px);
+}
+
+.legal-compact {
+  text-align: center;
+  color: rgba(255, 193, 7, 0.8);
+  font-size: 0.8rem;
+  padding: 0.8rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 8px;
+  font-style: italic;
+}
+
+/* Tips Modal */
+.tips-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 9997;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.tips-overlay.closing {
+  animation: fadeOut 0.3s ease-out;
+}
+
+.tips-modal {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 450px;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  z-index: 9998;
+  animation: modalSlideIn 0.3s ease-out;
   overflow: hidden;
 }
 
-@keyframes slideDown {
+.tips-modal.closing {
+  animation: modalSlideOut 0.3s ease-out;
+}
+
+@keyframes fadeIn {
   from {
     opacity: 0;
-    max-height: 0;
-    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    max-height: 1000px;
-    transform: translateY(0);
   }
 }
 
-/* Mobile responsive for collapsible instructions */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) translateY(0);
+  }
+}
+
+@keyframes modalSlideOut {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8) translateY(-20px);
+  }
+}
+
+.tips-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.tips-header h3 {
+  margin: 0;
+  color: #ffc107;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tips-content {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 0.8rem;
+}
+
+.tip-item:last-child {
+  margin-bottom: 0;
+  background: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.tip-item:last-child .tip-text {
+  color: rgba(255, 193, 7, 0.9);
+}
+
+.tip-item:last-child .tip-text strong {
+  color: #ffc107;
+}
+
+.tip-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.tip-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.tip-text strong {
+  color: white;
+  font-weight: 600;
+}
+
+/* Mobile adjustments */
 @media (max-width: 768px) {
-  .instructions-header h3 {
-    font-size: 1.1rem;
+  .control-panel {
+    padding: 1rem;
   }
   
-  .instructions-header:hover {
-    margin: 0 -0.5rem 1rem -0.5rem;
-    padding: 0.5rem;
+  .control-row {
+    gap: 0.8rem;
+  }
+  
+  .control-btn {
+    width: 120px;
+    height: 44px;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+  
+  .tips-modal {
+    width: 95%;
+  }
+  
+  .tips-header {
+    padding: 1rem;
+  }
+  
+  .tips-content {
+    padding: 1rem;
   }
 }
 /* Smooth scroll behavior for better animation */

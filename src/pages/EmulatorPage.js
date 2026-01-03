@@ -5,7 +5,6 @@ import Layout from '../components/Layout';
 import FloatingElements from '../components/FloatingElements';
 import EmulatorControls from '../components/EmulatorControls';
 import ErrorMessage from '../components/ErrorMessage';
-import Instructions from '../components/Instructions';
 import FloatingFullscreenButton from '../components/FloatingFullscreenButton';
 import PerformanceMonitor from '../components/PerformanceMonitor';
 
@@ -293,8 +292,6 @@ const EmulatorPage = () => {
             {renderGameContainer()}
           </div>
         </div>
-
-        <Instructions />
       </div>
 
       <ErrorMessage error={error} onClose={handleCloseError} />

@@ -1,57 +1,44 @@
 import React, { useState } from 'react';
 
 const Instructions = () => {
-  const [showInstructions, setShowInstructions] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  const instructions = [
+    { id: 'rom', icon: '📁', title: 'Chọn ROM', desc: 'Click "Chọn ROM File"' },
+    { id: 'play', icon: '🎮', title: 'Khởi động', desc: 'Nhấn "Chơi Game"' },
+    { id: 'controls', icon: '⌨️', title: 'Điều khiển', desc: 'Arrow keys, Z (A), X (B), Enter (Start)' },
+    { id: 'fullscreen', icon: '🖥️', title: 'Toàn màn hình', desc: 'Double-click (PC) hoặc double-tap (Mobile)' }
+  ];
 
   return (
-    <div className="instructions">
-      <div 
-        className="instructions-header" 
-        onClick={() => setShowInstructions(!showInstructions)}
-        style={{ cursor: 'pointer', userSelect: 'none' }}
-      >
-        <h3>🎮 Hướng dẫn sử dụng {showInstructions ? '▼' : '▶'}</h3>
+    <div className="instructions-compact">
+      <div className="instructions-title">
+        <span>💡 Quick Tips:</span>
       </div>
       
-      {showInstructions && (
-        <div className="instructions-content">
-          <div className="instructions-grid">
-            <div className="instruction-item">
-              <div className="instruction-icon">📁</div>
-              <div>
-                <strong>Chọn ROM:</strong> Click "Chọn ROM File" và chọn file game
+      <div className="instructions-hints">
+        {instructions.map((item) => (
+          <div 
+            key={item.id}
+            className="hint-item"
+            onMouseEnter={() => setActiveTooltip(item.id)}
+            onMouseLeave={() => setActiveTooltip(null)}
+          >
+            <span className="hint-icon">{item.icon}</span>
+            <span className="hint-title">{item.title}</span>
+            
+            {activeTooltip === item.id && (
+              <div className="tooltip">
+                {item.desc}
               </div>
-            </div>
-            <div className="instruction-item">
-              <div className="instruction-icon">🎮</div>
-              <div>
-                <strong>Khởi động:</strong> Nhấn "Chơi Game" để bắt đầu
-              </div>
-            </div>
-            <div className="instruction-item">
-              <div className="instruction-icon">⌨️</div>
-              <div>
-                <strong>Điều khiển:</strong> Arrow keys, Z (A), X (B), Enter (Start)
-              </div>
-            </div>
-            <div className="instruction-item">
-              <div className="instruction-icon">🖥️</div>
-              <div>
-                <strong>Toàn màn hình:</strong> Double-click (PC) hoặc double-tap (Mobile) vào màn hình game
-              </div>
-            </div>
+            )}
           </div>
-
-          <div className="legal-notice">
-            <h4>⚖️ Lưu ý bản quyền</h4>
-            <ul>
-              <li>Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp</li>
-              <li>Tuân thủ luật bản quyền trong khu vực của bạn</li>
-              <li>Tôn trọng quyền sở hữu trí tuệ của nhà phát triển</li>
-            </ul>
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
+      
+      <div className="legal-compact">
+        <span>⚖️ Chỉ sử dụng ROM bạn sở hữu hợp pháp</span>
+      </div>
     </div>
   );
 };
