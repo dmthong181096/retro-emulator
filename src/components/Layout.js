@@ -1,9 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import UserProfile from './Auth/UserProfile';
+import LoginModal from './Auth/LoginModal';
 import Footer from './Footer';
 
 const Layout = ({ children }) => {
   const location = useLocation();
+  const { user } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     // Scroll to top when route changes
@@ -41,6 +46,28 @@ const Layout = ({ children }) => {
 
   return (
     <div>
+      {/* Top Bar with Auth */}
+      <div className="top-bar">
+        <div className="top-bar-content">
+          <div className="logo">
+            🎮 Retro Emulator
+          </div>
+          
+          <div className="auth-section">
+            {user ? (
+              <UserProfile />
+            ) : (
+              <button 
+                className="login-btn"
+                onClick={() => setShowLoginModal(true)}
+              >
+                🔐 Đăng nhập
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Particles */}
       <div className="particles" id="particles"></div>
 
@@ -49,6 +76,11 @@ const Layout = ({ children }) => {
       </div>
 
       <Footer />
+
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+      />
     </div>
   );
 };
