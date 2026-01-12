@@ -46,14 +46,42 @@ class SaveManager {
         type: 'application/octet-stream'
       });
 
-      // First, try to create bucket if it doesn't exist (will fail silently if exists)
+      // First, check if bucket exists, if not create it
       try {
-        await supabase.storage.createBucket('save-states', { public: false });
+        // Try to list files in bucket to check if it exists
+        const { data: bucketData, error: bucketCheckError } = await supabase.storage
+          .from('save-states')
+          .list('', { limit: 1 });
+
+        // If bucket doesn't exist, create it
+        if (bucketCheckError && bucketCheckError.message.includes('not found')) {
+          console.log('📦 Creating save-states bucket...');
+          const { data: createData, error: createError } = await supabase.storage
+            .createBucket('save-states', { 
+              public: false,
+              allowedMimeTypes: ['application/octet-stream'],
+              fileSizeLimit: 10485760 // 10MB limit
+            });
+          
+          if (createError) {
+            console.log('❌ Bucket creation failed:', createError);
+            // Continue anyway, bucket might already exist
+          } else {
+            console.log('✅ Bucket created successfully');
+          }
+        } else if (bucketCheckError) {
+          console.log('⚠️ Bucket check error:', bucketCheckError);
+          // Continue anyway
+        } else {
+          console.log('✅ Bucket exists, proceeding with upload');
+        }
       } catch (bucketError) {
-        // Bucket creation skipped
+        console.log('⚠️ Bucket operation error:', bucketError);
+        // Continue anyway
       }
 
       // Upload to Supabase Storage (root level, no folders)
+      console.log('📤 Uploading save file:', fileName);
       const { data, error } = await supabase.storage
         .from('save-states')
         .upload(fileName, file, {
@@ -61,8 +89,21 @@ class SaveManager {
         });
 
       if (error) {
-        return { success: false, error: error.message };
+        console.log('❌ Upload error:', error);
+        
+        // Check for specific error types
+        if (error.message.includes('not found')) {
+          return { success: false, error: 'Storage bucket not found. Please check Supabase configuration.' };
+        } else if (error.message.includes('permission')) {
+          return { success: false, error: 'Permission denied. Please check storage policies.' };
+        } else if (error.message.includes('size')) {
+          return { success: false, error: 'File too large. Maximum size is 10MB.' };
+        } else {
+          return { success: false, error: `Upload failed: ${error.message}` };
+        }
       }
+
+      console.log('✅ Upload successful:', data);
 
       // Also save metadata to database (optional, for listing saves)
       try {
