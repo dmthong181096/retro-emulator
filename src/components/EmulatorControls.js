@@ -1,24 +1,62 @@
 import React, { useState } from 'react';
 
-const EmulatorControls = ({ 
-  selectedFile, 
-  isGameLoaded, 
-  isGameStarted, 
-  currentConsole, 
-  onFileSelect, 
-  onStartGame, 
+const EmulatorControls = ({
+  selectedFile,
+  isGameLoaded,
+  isGameStarted,
+  currentConsole,
+  onFileSelect,
+  onStartGame,
   onGoHome,
-  onTestError 
+  onTestError,
+  onCloudSave,
+  onCloudLoad,
+  onCloudDownload,
+  onDebugFilesystem,
+  onDebugLoadState,
+  onInterceptLoadState,
+  isLoggedIn
 }) => {
+  // Debug button visibility
+  console.log('🎮 EmulatorControls Render:', { 
+    isGameLoaded, 
+    isLoggedIn, 
+    hasFile: !!selectedFile, 
+    isGameStarted,
+    showCloudButtons: isGameLoaded && isLoggedIn
+  });
+
   const [showTips, setShowTips] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCloseTips = () => {
     setIsClosing(true);
     setTimeout(() => {
       setShowTips(false);
       setIsClosing(false);
-    }, 300); // Match animation duration
+    }, 300);
+  };
+
+  const handleCloudSave = async () => {
+    if (!onCloudSave) return;
+    setIsSaving(true);
+    try {
+      await onCloudSave();
+    } finally {
+      setTimeout(() => setIsSaving(false), 1000);
+    }
+  };
+
+  const handleCloudLoad = async () => {
+    if (!onCloudLoad) return;
+    setIsLoading(true);
+    try {
+      await onCloudLoad();
+    } finally {
+      setTimeout(() => setIsLoading(false), 1000);
+    }
   };
 
   const tips = [
@@ -26,6 +64,7 @@ const EmulatorControls = ({
     { icon: '🎮', title: 'Khởi động', desc: 'Nhấn "Chơi Game" để bắt đầu' },
     { icon: '⌨️', title: 'Điều khiển', desc: 'Arrow keys, Z (A), X (B), Enter (Start)' },
     { icon: '🖥️', title: 'Toàn màn hình', desc: 'Double-click (PC) hoặc double-tap (Mobile)' },
+    { icon: '☁️', title: 'Cloud Save', desc: 'Đăng nhập để lưu/tải game từ cloud' },
     { icon: '⚖️', title: 'Lưu ý bản quyền', desc: 'Chỉ sử dụng ROM từ game bạn sở hữu hợp pháp' }
   ];
 
@@ -34,16 +73,16 @@ const EmulatorControls = ({
       <div className="control-panel">
         <div className="control-row">
           <div className="file-input-wrapper">
-            <input 
-              type="file" 
-              id="romFile" 
-              className="file-input" 
-              accept={currentConsole.files.join(',')} 
+            <input
+              type="file"
+              id="romFile"
+              className="file-input"
+              accept={currentConsole.files.join(',')}
               onChange={onFileSelect}
               disabled={isGameLoaded}
             />
-            <label 
-              htmlFor="romFile" 
+            <label
+              htmlFor="romFile"
               className={`control-btn file-btn ${isGameLoaded ? 'disabled' : ''}`}
             >
               {selectedFile ? (
@@ -53,47 +92,112 @@ const EmulatorControls = ({
               )}
             </label>
           </div>
-          
-          <button 
-            className="control-btn play-btn" 
-            onClick={onStartGame} 
+
+          <button
+            className="control-btn play-btn"
+            onClick={onStartGame}
             disabled={!selectedFile || isGameStarted}
           >
             {isGameStarted ? (isGameLoaded ? '🎮 Đang chơi' : '🔄 Đang tải...') : '🎮 Chơi Game'}
           </button>
-          
+
           <button className="control-btn home-btn" onClick={onGoHome}>
             🏠 Trang chủ
           </button>
 
-          <button 
-            className="control-btn info-btn" 
+          <button
+            className="control-btn info-btn"
             onClick={() => setShowTips(true)}
             title="Hướng dẫn sử dụng"
           >
             💡 Tips
           </button>
         </div>
+
+        {/* Cloud Save/Load buttons - show when game is loaded */}
+        {isGameLoaded && (
+          <div className="control-row cloud-row">
+            <button
+              className="control-btn cloud-save-btn"
+              onClick={handleCloudSave}
+              disabled={isSaving || !isLoggedIn}
+              title={!isLoggedIn ? "Vui lòng đăng nhập để sử dụng Cloud Save" : "Lưu game lên cloud"}
+            >
+              {isSaving ? '⏳ Đang lưu...' : '☁️ Lưu Cloud'}
+            </button>
+
+            <button
+              className="control-btn cloud-load-btn"
+              onClick={handleCloudLoad}
+              disabled={isLoading || !isLoggedIn}
+              title={!isLoggedIn ? "Vui lòng đăng nhập để sử dụng Cloud Load" : "Tải game từ cloud"}
+            >
+              {isLoading ? '⏳ Đang tải...' : '📥 Tải Cloud'}
+            </button>
+
+            <button
+              className="control-btn cloud-download-btn"
+              onClick={onCloudDownload}
+              disabled={!isLoggedIn}
+              title={!isLoggedIn ? "Vui lòng đăng nhập để tải file" : "Tải file save state về máy"}
+            >
+              📥 Tải File
+            </button>
+
+            <button
+              className="control-btn debug-btn"
+              onClick={onDebugFilesystem}
+              disabled={!isGameLoaded}
+              title="Debug: Xem files trong EmulatorJS filesystem"
+            >
+              🔍 Debug FS
+            </button>
+
+            <button
+              className="control-btn debug-load-btn"
+              onClick={onDebugLoadState}
+              disabled={!isGameLoaded}
+              title="Debug: Test các function load state của EmulatorJS"
+            >
+              🧪 Test Load
+            </button>
+
+            <button
+              className="control-btn intercept-btn"
+              onClick={onInterceptLoadState}
+              disabled={!isGameLoaded}
+              title="Debug: Intercept EmulatorJS load state button"
+            >
+              🕵️ Intercept
+            </button>
+
+            {!isLoggedIn && (
+              <div className="cloud-login-hint">
+                <small>💡 Đăng nhập để sử dụng Cloud Save/Load</small>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tips Modal */}
       {showTips && (
         <>
-          <div 
+          <div
             className={`tips-overlay ${isClosing ? 'closing' : ''}`}
             onClick={handleCloseTips}
           />
           <div className={`tips-modal ${isClosing ? 'closing' : ''}`}>
             <div className="tips-header">
               <h3>💡 Hướng dẫn sử dụng</h3>
-              <button 
+              <button
                 className="close-btn"
                 onClick={handleCloseTips}
               >
                 ×
               </button>
             </div>
-            
+
             <div className="tips-content">
               {tips.map((tip, index) => (
                 <div key={index} className="tip-item">

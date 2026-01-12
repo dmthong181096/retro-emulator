@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import UserProfile from './Auth/UserProfile';
 import LoginModal from './Auth/LoginModal';
 import Footer from './Footer';
+import SupabaseStatus from './SupabaseStatus';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -81,6 +82,9 @@ const Layout = ({ children }) => {
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)} 
       />
+      
+      {/* Supabase Status (only in development) */}
+      {process.env.NODE_ENV === 'development' && <SupabaseStatus />}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { getAllConsoles } from '../config/Config';
 import Layout from '../components/Layout';
 import FloatingElements from '../components/FloatingElements';
 import ConsoleCard from '../components/ConsoleCard';
+import RecentGames from '../components/RecentGames';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -31,6 +32,8 @@ const Home = () => {
         <h1 className="hero-title">🎮 Retro Console Emulator</h1>
         <p className="hero-subtitle">Trải nghiệm lại những game console kinh điển ngay trên trình duyệt</p>
       </div>
+
+      <RecentGames />
 
       <div className="consoles-grid">
         {consoles.map((console) => (
