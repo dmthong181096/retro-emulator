@@ -144,32 +144,37 @@ const EmulatorControls = ({
               📥 Tải File
             </button>
 
-            <button
-              className="control-btn debug-btn"
-              onClick={onDebugFilesystem}
-              disabled={!isGameLoaded}
-              title="Debug: Xem files trong EmulatorJS filesystem"
-            >
-              🔍 Debug FS
-            </button>
+            {/* Debug buttons - only show in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <>
+                <button
+                  className="control-btn debug-btn"
+                  onClick={onDebugFilesystem}
+                  disabled={!isGameLoaded}
+                  title="Debug: Xem files trong EmulatorJS filesystem"
+                >
+                  🔍 Debug FS
+                </button>
 
-            <button
-              className="control-btn debug-load-btn"
-              onClick={onDebugLoadState}
-              disabled={!isGameLoaded}
-              title="Debug: Test các function load state của EmulatorJS"
-            >
-              🧪 Test Load
-            </button>
+                <button
+                  className="control-btn debug-load-btn"
+                  onClick={onDebugLoadState}
+                  disabled={!isGameLoaded}
+                  title="Debug: Test các function load state của EmulatorJS"
+                >
+                  🧪 Test Load
+                </button>
 
-            <button
-              className="control-btn intercept-btn"
-              onClick={onInterceptLoadState}
-              disabled={!isGameLoaded}
-              title="Debug: Intercept EmulatorJS load state button"
-            >
-              🕵️ Intercept
-            </button>
+                <button
+                  className="control-btn intercept-btn"
+                  onClick={onInterceptLoadState}
+                  disabled={!isGameLoaded}
+                  title="Debug: Intercept EmulatorJS load state button"
+                >
+                  🕵️ Intercept
+                </button>
+              </>
+            )}
 
             {!isLoggedIn && (
               <div className="cloud-login-hint">

@@ -141,96 +141,226 @@
       if (event.data.type === 'requestFullscreen') {
         toggleFullscreen();
       } else if (event.data.type === 'cloudSave') {
-        // User clicked Cloud Save button - Use existing save state file as template
+        // User clicked Cloud Save button - Trigger EmulatorJS save state and upload result
         console.log('☁️ Cloud Save request received');
         
         try {
-          console.log('☁️ Using existing save state file as template...');
+          console.log('☁️ Step 1: Finding EmulatorJS save state button...');
           
-          // Fetch the existing save state file from the server
-          fetch('/Pokemon - FireRed Version (USA, Europe) (Rev 1).gba (2).state')
-            .then(response => {
-              if (!response.ok) {
-                throw new Error('Template file not found');
+          // Find EmulatorJS save state button
+          const possibleButtons = document.querySelectorAll('button, input[type="button"], [role="button"]');
+          let saveButton = null;
+          
+          for (const button of possibleButtons) {
+            const text = button.textContent || button.title || button.alt || '';
+            const onclick = button.onclick ? button.onclick.toString() : '';
+            
+            if (text.toLowerCase().includes('save') && text.toLowerCase().includes('state') ||
+                onclick.includes('save') && onclick.includes('state') ||
+                button.title?.toLowerCase().includes('save state')) {
+              console.log('☁️ Found potential save state button:', {
+                text: text,
+                title: button.title,
+                onclick: onclick.substring(0, 100) + '...'
+              });
+              saveButton = button;
+              break;
+            }
+          }
+          
+          if (!saveButton) {
+            console.log('☁️ No save state button found, trying alternative methods...');
+            
+            // Try to find any button with "save" in text
+            for (const button of possibleButtons) {
+              const text = button.textContent || button.title || button.alt || '';
+              if (text.toLowerCase().includes('save')) {
+                console.log('☁️ Found save button:', text);
+                saveButton = button;
+                break;
               }
-              return response.arrayBuffer();
-            })
-            .then(arrayBuffer => {
-              const saveData = new Uint8Array(arrayBuffer);
-              console.log('☁️ Template save state loaded:', saveData.length, 'bytes');
+            }
+          }
+          
+          if (saveButton) {
+            console.log('☁️ Step 2: Setting up save dialog interception...');
+            
+            // Intercept save dialog by overriding createElement and file download
+            const originalCreateElement = document.createElement;
+            const originalCreateObjectURL = URL.createObjectURL;
+            let saveIntercepted = false;
+            
+            // Override createElement to catch file inputs and links
+            document.createElement = function(tagName) {
+              const element = originalCreateElement.call(this, tagName);
               
-              // Modify timestamp in the save state to make it "current"
-              const timestamp = Date.now();
-              const timestampBytes = new Uint8Array(8);
-              new DataView(timestampBytes.buffer).setBigUint64(0, BigInt(timestamp), true);
-              
-              // Update timestamp at position 64 (after header and game info)
-              saveData.set(timestampBytes, 64);
-              
-              console.log('☁️ Updated save state with current timestamp');
-              
-              // Send to cloud
-              parent.postMessage({
-                type: 'saveState',
-                slot: 0,
-                data: saveData,
-                timestamp: timestamp,
-                fileName: gameName + '.state'
-              }, '*');
-              
-              console.log('✅ Cloud save completed using template!');
-            })
-            .catch(error => {
-              console.error('☁️ Could not load template file:', error);
-              
-              // Fallback: Create a basic save state manually
-              console.log('☁️ Creating fallback save state...');
-              
-              const saveSize = 528472;
-              const manualSave = new Uint8Array(saveSize);
-              
-              // Add proper mGBA header: "RASTATE" + version byte + "MEM "
-              const headerPart1 = new TextEncoder().encode('RASTATE');
-              manualSave.set(headerPart1, 0);
-              manualSave[7] = 1; // Version byte
-              const headerPart2 = new TextEncoder().encode('MEM ');
-              manualSave.set(headerPart2, 8);
-              
-              // Add realistic data pattern
-              manualSave[12] = 64; manualSave[13] = 16; manualSave[14] = 8; manualSave[15] = 0;
-              manualSave[16] = 7; manualSave[17] = 0; manualSave[18] = 0; manualSave[19] = 1;
-              
-              // Add game info
-              const gameNameBytes = new TextEncoder().encode('POKEMON FIREBPRE');
-              manualSave.set(gameNameBytes, 32);
-              
-              // Add timestamp
-              const timestamp = Date.now();
-              const timestampBytes = new Uint8Array(8);
-              new DataView(timestampBytes.buffer).setBigUint64(0, BigInt(timestamp), true);
-              manualSave.set(timestampBytes, 64);
-              
-              // Fill with pattern
-              for (let i = 100; i < saveSize; i += 4) {
-                manualSave[i] = (i % 256);
-                manualSave[i + 1] = ((i >> 8) % 256);
-                manualSave[i + 2] = ((i >> 16) % 256);
-                manualSave[i + 3] = ((i >> 24) % 256);
+              if (tagName.toLowerCase() === 'a' && !saveIntercepted) {
+                console.log('☁️ Intercepted anchor element creation for download');
+                
+                // Override href setter to catch blob URLs
+                const originalHrefSetter = Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, 'href').set;
+                Object.defineProperty(element, 'href', {
+                  set: function(value) {
+                    if (value.startsWith('blob:') && !saveIntercepted) {
+                      console.log('☁️ Intercepted blob URL for save:', value);
+                      saveIntercepted = true;
+                      
+                      // Fetch the blob data
+                      fetch(value)
+                        .then(response => response.arrayBuffer())
+                        .then(arrayBuffer => {
+                          const saveData = new Uint8Array(arrayBuffer);
+                          console.log('☁️ Intercepted save data:', {
+                            size: saveData.length,
+                            header: new TextDecoder().decode(saveData.slice(0, 12)),
+                            fileName: this.download || 'save.state'
+                          });
+                          
+                          // Upload to cloud immediately
+                          parent.postMessage({
+                            type: 'saveState',
+                            slot: 0,
+                            data: saveData,
+                            timestamp: Date.now(),
+                            fileName: this.download || 'save.state'
+                          }, '*');
+                          
+                          console.log('✅ Cloud save completed - intercepted file uploaded!');
+                          
+                          // Restore original functions
+                          document.createElement = originalCreateElement;
+                          URL.createObjectURL = originalCreateObjectURL;
+                        })
+                        .catch(error => {
+                          console.error('☁️ Error fetching blob data:', error);
+                          parent.postMessage({
+                            type: 'cloudSaveError',
+                            error: 'Failed to intercept save data: ' + error.message
+                          }, '*');
+                        });
+                      
+                      // Don't actually set the href to prevent download dialog
+                      return;
+                    }
+                    originalHrefSetter.call(this, value);
+                  },
+                  get: function() {
+                    return this.getAttribute('href');
+                  }
+                });
               }
               
-              console.log('☁️ Created fallback save state:', manualSave.length, 'bytes');
+              return element;
+            };
+            
+            // Override createObjectURL to intercept blob creation
+            URL.createObjectURL = function(blob) {
+              const url = originalCreateObjectURL.call(this, blob);
               
-              // Send to cloud
-              parent.postMessage({
-                type: 'saveState',
-                slot: 0,
-                data: manualSave,
-                timestamp: timestamp,
-                fileName: gameName + '.state'
-              }, '*');
+              if (blob instanceof Blob && blob.size > 100000 && !saveIntercepted) { // Likely a save state file
+                console.log('☁️ Intercepted blob creation for save:', {
+                  size: blob.size,
+                  type: blob.type
+                });
+                
+                // Read the blob data immediately
+                blob.arrayBuffer().then(arrayBuffer => {
+                  const saveData = new Uint8Array(arrayBuffer);
+                  const header = new TextDecoder().decode(saveData.slice(0, 12));
+                  
+                  if (header.startsWith('RASTATE')) {
+                    console.log('☁️ Detected save state blob:', {
+                      size: saveData.length,
+                      header: header
+                    });
+                    
+                    saveIntercepted = true;
+                    
+                    // Upload to cloud
+                    parent.postMessage({
+                      type: 'saveState',
+                      slot: 0,
+                      data: saveData,
+                      timestamp: Date.now(),
+                      fileName: `${gameName}_${Date.now()}.state`
+                    }, '*');
+                    
+                    console.log('✅ Cloud save completed - blob intercepted and uploaded!');
+                    
+                    // Restore original functions
+                    document.createElement = originalCreateElement;
+                    URL.createObjectURL = originalCreateObjectURL;
+                  }
+                }).catch(error => {
+                  console.error('☁️ Error reading blob:', error);
+                });
+              }
               
-              console.log('✅ Cloud save completed using fallback!');
+              return url;
+            };
+            
+            console.log('☁️ Step 3: Clicking EmulatorJS save state button with interception...');
+            
+            // Click the save button
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
             });
+            
+            saveButton.dispatchEvent(clickEvent);
+            console.log('☁️ Save state button clicked, interception active...');
+            
+            // Safety restore after 10 seconds
+            setTimeout(() => {
+              if (document.createElement !== originalCreateElement) {
+                document.createElement = originalCreateElement;
+                console.log('☁️ Safety restore of createElement');
+              }
+              if (URL.createObjectURL !== originalCreateObjectURL) {
+                URL.createObjectURL = originalCreateObjectURL;
+                console.log('☁️ Safety restore of createObjectURL');
+              }
+              
+              if (!saveIntercepted) {
+                console.log('☁️ No save intercepted after 10 seconds, trying filesystem method...');
+                
+                // Fallback to filesystem monitoring
+                const FS = window.EJS_emulator?.gameManager?.FS;
+                if (FS) {
+                  const stateFiles = FS.readdir('/').filter(file => file.endsWith('.state'));
+                  if (stateFiles.length > 0) {
+                    const latestFile = stateFiles[stateFiles.length - 1]; // Assume last is newest
+                    const fileData = FS.readFile('/' + latestFile);
+                    
+                    console.log('☁️ Fallback: Using filesystem file:', latestFile);
+                    
+                    parent.postMessage({
+                      type: 'saveState',
+                      slot: 0,
+                      data: fileData,
+                      timestamp: Date.now(),
+                      fileName: latestFile
+                    }, '*');
+                    
+                    console.log('✅ Cloud save completed via fallback!');
+                  } else {
+                    parent.postMessage({
+                      type: 'cloudSaveError',
+                      error: 'No save state file found after save operation'
+                    }, '*');
+                  }
+                }
+              }
+            }, 10000);
+            
+          } else {
+            console.error('☁️ No save state button found');
+            parent.postMessage({
+              type: 'cloudSaveError',
+              error: 'Could not find EmulatorJS save state button'
+            }, '*');
+          }
           
         } catch (error) {
           console.error('☁️ Cloud save error:', error);
@@ -503,11 +633,14 @@
                               console.log('☁️ File input type set, intercepting...');
                               fileInputIntercepted = true;
                               
-                              // Immediately provide our file
-                              setTimeout(() => {
+                              // Override click to prevent dialog
+                              this.click = function() {
+                                console.log('☁️ File input click intercepted - preventing dialog');
+                                
+                                // Immediately provide our file instead of showing dialog
                                 const originalFileName = event.data.originalFileName || 'cloudload.state';
                                 
-                                console.log('☁️ Providing file to intercepted input:', originalFileName);
+                                console.log('☁️ Providing file automatically:', originalFileName);
                                 
                                 // Create File object from downloaded data
                                 const file = new File([saveData], originalFileName, {
@@ -525,14 +658,17 @@
                                 this.dispatchEvent(new Event('change', { bubbles: true }));
                                 this.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                console.log('☁️ File provided to intercepted input');
+                                console.log('☁️ File provided automatically - no dialog shown');
                                 
-                                // Restore original createElement after a delay
-                                setTimeout(() => {
-                                  document.createElement = originalCreateElement;
-                                  console.log('☁️ Restored original createElement');
-                                }, 1000);
-                              }, 10);
+                                // Don't call original click - this prevents the dialog
+                                return false;
+                              };
+                              
+                              // Restore original createElement after a delay
+                              setTimeout(() => {
+                                document.createElement = originalCreateElement;
+                                console.log('☁️ Restored original createElement');
+                              }, 1000);
                             }
                           },
                           get: function() {
