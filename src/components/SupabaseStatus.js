@@ -4,9 +4,24 @@ import { supabase } from '../config/supabase';
 const SupabaseStatus = () => {
   const [status, setStatus] = useState('checking');
   const [details, setDetails] = useState('');
+  const [debugInfo, setDebugInfo] = useState({});
 
   useEffect(() => {
     const checkSupabaseConnection = async () => {
+      // Collect debug info
+      const debug = {
+        environment: process.env.NODE_ENV,
+        hasUrl: !!process.env.REACT_APP_SUPABASE_URL,
+        hasKey: !!process.env.REACT_APP_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
+        urlPreview: process.env.REACT_APP_SUPABASE_URL ? 
+          `${process.env.REACT_APP_SUPABASE_URL.substring(0, 30)}...` : 'undefined',
+        keyPreview: process.env.REACT_APP_SUPABASE_PUBLISHABLE_DEFAULT_KEY ? 
+          `${process.env.REACT_APP_SUPABASE_PUBLISHABLE_DEFAULT_KEY.substring(0, 20)}...` : 'undefined'
+      };
+      
+      setDebugInfo(debug);
+      console.log('🔍 SupabaseStatus Debug Info:', debug);
+
       try {
         // Test if supabase is real or mock
         if (!supabase || !supabase.auth || typeof supabase.auth.getSession !== 'function') {
@@ -19,6 +34,7 @@ const SupabaseStatus = () => {
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
+          console.log('❌ Supabase connection error:', error);
           if (error.message.includes('Failed to fetch') || 
               error.message.includes('CORS')) {
             setStatus('cors-error');
@@ -28,10 +44,12 @@ const SupabaseStatus = () => {
             setDetails(`Connection error: ${error.message}`);
           }
         } else {
+          console.log('✅ Supabase connection successful:', data);
           setStatus('connected');
           setDetails('Supabase connected successfully');
         }
       } catch (error) {
+        console.log('❌ Supabase connection exception:', error);
         setStatus('error');
         setDetails(`Connection failed: ${error.message}`);
       }
@@ -89,6 +107,24 @@ const SupabaseStatus = () => {
       <div style={{ fontSize: '11px', opacity: 0.8 }}>
         {details}
       </div>
+      
+      {/* Debug info - only show in development or when there's an issue */}
+      {(process.env.NODE_ENV === 'development' || status !== 'connected') && (
+        <div style={{ 
+          fontSize: '10px', 
+          marginTop: '8px', 
+          padding: '6px',
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '4px',
+          fontFamily: 'monospace'
+        }}>
+          <div>🔧 Debug Info:</div>
+          <div>• ENV: {debugInfo.environment}</div>
+          <div>• URL: {debugInfo.hasUrl ? '✅' : '❌'} {debugInfo.urlPreview}</div>
+          <div>• KEY: {debugInfo.hasKey ? '✅' : '❌'} {debugInfo.keyPreview}</div>
+        </div>
+      )}
+      
       {status === 'cors-error' && (
         <div style={{ 
           fontSize: '10px', 
