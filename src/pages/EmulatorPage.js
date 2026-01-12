@@ -83,7 +83,7 @@ const EmulatorPage = () => {
             script.parentNode.removeChild(script);
           }
         } catch (e) {
-          console.warn('Script cleanup warning:', e);
+          // Ignore cleanup warnings
         }
       });
     };
@@ -95,7 +95,6 @@ const EmulatorPage = () => {
   // Handle resume functionality
   useEffect(() => {
     if (resumeData) {
-      console.log('🎮 Resume request detected:', resumeData);
       // Show a message that this is a resume request
       // In a real implementation, you might want to:
       // 1. Show the last played ROM file name
@@ -131,7 +130,6 @@ const EmulatorPage = () => {
     // Track recent game
     const gameName = selectedFile.name.replace(/\.[^/.]+$/, ""); // Remove file extension
     recentGamesManager.addRecentGame(gameName, consoleType, consoleType);
-    console.log('🎮 Added to recent games:', gameName);
     
     // Scroll to emulator immediately for both desktop and mobile
     setTimeout(() => {
@@ -176,10 +174,8 @@ const EmulatorPage = () => {
         
         // Listen for messages from iframe
         const messageHandler = (event) => {
-          console.log('🔄 Message received from iframe:', event.data);
           
           if (event.data.type === 'gameStarted') {
-            console.log('🎮 Game started successfully');
             setIsGameLoaded(true);
             setError(null);
             
@@ -188,24 +184,19 @@ const EmulatorPage = () => {
             
             // Initialize save manager with user and game info
             if (user && selectedFile) {
-              console.log('💾 Initializing SaveManager:', {
-                user: user.email,
-                game: selectedFile.name,
-                console: consoleType
-              });
               saveManager.initialize(user, selectedFile.name, consoleType);
               
               // List existing saves
               setTimeout(async () => {
                 const result = await saveManager.listSaves();
                 if (result.success && result.saves.length > 0) {
-                  console.log('💾 Available cloud saves:', result.saves);
+                  // Found cloud saves
                 } else {
-                  console.log('💾 No cloud saves found for this game');
+                  // No cloud saves found for this game
                 }
               }, 1000);
             } else {
-              console.log('💾 SaveManager not initialized - no user or file');
+              // SaveManager not initialized - no user or file
             }
             
             // Add double-click fullscreen to iframe
@@ -219,7 +210,6 @@ const EmulatorPage = () => {
             }
             
           } else if (event.data.type === 'gameError') {
-            console.log('❌ Game error:', event.data.error);
             setIsGameStarted(false);
             setIsGameLoaded(false);
             setShowFloatingElements(true); // Show particles again when error
@@ -227,22 +217,18 @@ const EmulatorPage = () => {
             
           } else if (event.data.type === 'saveState') {
             // Cloud save from our button
-            console.log('☁️ Cloud save data received:', event.data.data?.length || 0, 'bytes');
             handleSaveState(event.data.slot, event.data.data);
             
           } else if (event.data.type === 'cloudSaveError') {
             // Cloud save error
-            console.log('☁️ Cloud save error:', event.data.error);
             setError(`Lỗi Cloud Save: ${event.data.error}`);
             
           } else if (event.data.type === 'cloudLoadSuccess') {
             // Cloud load success
-            console.log('☁️ Cloud load success:', event.data.message);
             // Could show a success message or notification here
             
           } else if (event.data.type === 'cloudLoadError') {
             // Cloud load error
-            console.log('☁️ Cloud load error:', event.data.error);
             setError(`Lỗi Cloud Load: ${event.data.error}`);
           }
         };
@@ -293,7 +279,6 @@ const EmulatorPage = () => {
     testGames.forEach((game, index) => {
       setTimeout(() => {
         recentGamesManager.addRecentGame(game.name, game.console, game.console);
-        console.log('🎮 Added test game:', game.name);
       }, index * 100);
     });
     
@@ -334,42 +319,28 @@ const EmulatorPage = () => {
         saveManager.initialize(user, selectedFile.name, consoleType);
     }
 
-    console.log('💾 handleSaveState called:', {
-      originalSlot: slot,
-      actualSlot: actualSlot,
-      dataType: typeof saveData,
-      dataSize: saveData ? saveData.length : 0,
-      userLoggedIn: !!user,
-      saveManagerEnabled: saveManager.isEnabled
-    });
-
     if (!user) {
-      console.log('💾 Local save only - user not logged in');
       return;
     }
 
     try {
-      console.log('💾 Attempting cloud save...');
       const result = await saveManager.saveToCloud(slot, saveData);
-      console.log('💾 Cloud save result:', result);
       
       if (result.success) {
         if (result.fallback) {
-          console.log(`⚠️ Save slot ${actualSlot} saved with fallback: ${result.message}`);
+          // Save slot saved with fallback
         } else {
-          console.log(`✅ Save slot ${actualSlot} uploaded to cloud successfully`);
+          // Save slot uploaded to cloud successfully
         }
       } else {
-        console.warn(`❌ Save failed: ${result.error}`);
         // If it failed due to user not logged in (race condition?), try one more time
         if (result.error === 'User not logged in' && user) {
-             console.log('🔄 Retrying save with immediate re-init...');
              saveManager.initialize(user, selectedFile.name, consoleType);
              await saveManager.saveToCloud(slot, saveData);
         }
       }
     } catch (error) {
-      console.error('💾 Save error:', error);
+      // Save error
     }
   };
 
@@ -383,11 +354,9 @@ const EmulatorPage = () => {
 
   // Cloud Save - force save current state and upload to cloud
   const handleCloudSave = async () => {
-    console.log('☁️ Cloud Save button clicked');
     
     const iframe = document.querySelector('#gameContainer iframe');
     if (!iframe) {
-      console.error('☁️ Iframe not found');
       return;
     }
 
@@ -397,11 +366,9 @@ const EmulatorPage = () => {
 
   // Intercept Load State - hook into EmulatorJS load state button to see what it does
   const handleInterceptLoadState = () => {
-    console.log('🕵️ Intercept Load State button clicked');
     
     const iframe = document.querySelector('#gameContainer iframe');
     if (!iframe) {
-      console.error('🕵️ Iframe not found');
       return;
     }
 
@@ -411,11 +378,9 @@ const EmulatorPage = () => {
 
   // Debug Load State - test all load state functions manually
   const handleDebugLoadState = () => {
-    console.log('🧪 Debug Load State button clicked');
     
     const iframe = document.querySelector('#gameContainer iframe');
     if (!iframe) {
-      console.error('🧪 Iframe not found');
       return;
     }
 
@@ -425,11 +390,9 @@ const EmulatorPage = () => {
 
   // Debug Filesystem - show files in EmulatorJS filesystem
   const handleDebugFilesystem = () => {
-    console.log('🔍 Debug Filesystem button clicked');
     
     const iframe = document.querySelector('#gameContainer iframe');
     if (!iframe) {
-      console.error('🔍 Iframe not found');
       return;
     }
 
@@ -439,10 +402,8 @@ const EmulatorPage = () => {
 
   // Cloud Download - download save file from cloud to local machine
   const handleCloudDownload = async () => {
-    console.log('📥 Cloud Download button clicked');
     
     if (!user) {
-      console.error('📥 User not logged in');
       setError('Vui lòng đăng nhập để tải file');
       return;
     }
@@ -453,16 +414,12 @@ const EmulatorPage = () => {
 
     try {
       // Download save data from cloud
-      console.log('📥 Downloading file from cloud...');
       const result = await saveManager.loadFromCloud(0);
       
       if (!result.success) {
-        console.error('📥 Cloud download failed:', result.error);
         setError('Không tìm thấy save file trên cloud');
         return;
       }
-
-      console.log('📥 File downloaded, size:', result.saveData?.length);
 
       // Create blob and download link
       const blob = new Blob([result.saveData], { type: 'application/octet-stream' });
@@ -481,20 +438,15 @@ const EmulatorPage = () => {
       // Clean up
       URL.revokeObjectURL(url);
       
-      console.log('✅ File downloaded successfully:', link.download);
-      
     } catch (error) {
-      console.error('📥 Cloud download error:', error);
       setError('Lỗi khi tải file từ cloud');
     }
   };
 
   // Cloud Load - download from cloud and load into emulator
   const handleCloudLoad = async () => {
-    console.log('☁️ Cloud Load button clicked');
     
     if (!user) {
-      console.error('☁️ User not logged in');
       return;
     }
 
@@ -504,21 +456,16 @@ const EmulatorPage = () => {
 
     try {
       // Step 1: Download save data from cloud
-      console.log('☁️ Step 1: Downloading from cloud...');
       const result = await saveManager.loadFromCloud(0);
       
       if (!result.success) {
-        console.error('☁️ Cloud load failed:', result.error);
         setError('Không tìm thấy save data trên cloud');
         return;
       }
 
-      console.log('☁️ Step 2: Got save data, size:', result.saveData?.length);
-
       // Step 2: Send to iframe to write file
       const iframe = document.querySelector('#gameContainer iframe');
       if (!iframe) {
-        console.error('☁️ Iframe not found');
         return;
       }
 
@@ -529,9 +476,7 @@ const EmulatorPage = () => {
         originalFileName: result.fileName // Pass original filename
       }, '*');
 
-      console.log('☁️ Save data sent to iframe for loading');
     } catch (error) {
-      console.error('☁️ Cloud load error:', error);
       setError('Lỗi khi tải save từ cloud');
     }
   };

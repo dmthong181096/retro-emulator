@@ -13,7 +13,6 @@ const RecentGames = () => {
   }, []);
 
   const handleResumeGame = (game) => {
-    console.log('🎮 Resuming game:', game);
     navigate(`/emulator/${game.consoleId}`, {
       state: { 
         resumeGame: true,

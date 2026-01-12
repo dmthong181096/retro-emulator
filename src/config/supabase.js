@@ -4,13 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
-console.log('🔍 Supabase Config Check:', {
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-  urlValid: supabaseUrl && supabaseUrl.includes('supabase.co'),
-  keyValid: supabaseAnonKey && supabaseAnonKey.length > 20
-});
-
 // Check if config is valid
 const isValidConfig = supabaseUrl && supabaseUrl.includes('supabase.co') && 
                      supabaseAnonKey && supabaseAnonKey.length > 20;
@@ -19,7 +12,6 @@ let supabase = null;
 
 if (isValidConfig) {
   try {
-    console.log('🚀 Initializing Supabase client...');
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
@@ -27,14 +19,12 @@ if (isValidConfig) {
         detectSessionInUrl: true
       }
     });
-    console.log('✅ Supabase client created successfully');
     
   } catch (error) {
-    console.error('❌ Supabase initialization failed:', error.message);
+    // Supabase initialization failed
   }
 } else {
-  console.warn('⚠️ Invalid Supabase configuration - using mock mode');
-  console.log('💡 To fix: Check your .env file has correct REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_PUBLISHABLE_DEFAULT_KEY');
+  // Invalid Supabase configuration - using mock mode
 }
 
 // Mock Supabase for development when config is invalid

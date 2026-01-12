@@ -39,7 +39,6 @@ class RecentGamesManager {
       // Save to localStorage
       localStorage.setItem(this.storageKey, JSON.stringify(trimmedGames));
       
-      console.log('🎮 Added recent game:', gameEntry);
       return gameEntry;
     } catch (error) {
       console.error('❌ Error adding recent game:', error);
@@ -64,7 +63,6 @@ class RecentGamesManager {
       const recentGames = this.getRecentGames();
       const filteredGames = recentGames.filter(game => game.id !== gameId);
       localStorage.setItem(this.storageKey, JSON.stringify(filteredGames));
-      console.log('🗑️ Removed recent game:', gameId);
     } catch (error) {
       console.error('❌ Error removing recent game:', error);
     }
@@ -74,7 +72,6 @@ class RecentGamesManager {
   clearRecentGames() {
     try {
       localStorage.removeItem(this.storageKey);
-      console.log('🧹 Cleared all recent games');
     } catch (error) {
       console.error('❌ Error clearing recent games:', error);
     }

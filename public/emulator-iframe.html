@@ -64,9 +64,7 @@
         // Exit fullscreen
         try {
           if (document.exitFullscreen) {
-            document.exitFullscreen().catch(err => {
-              console.log('Exit fullscreen failed:', err);
-            });
+            document.exitFullscreen().catch(() => {});
           } else if (document.webkitExitFullscreen) {
             document.webkitExitFullscreen();
           } else if (document.mozCancelFullScreen) {
@@ -75,15 +73,13 @@
             document.msExitFullscreen();
           }
         } catch (error) {
-          console.log('Exit fullscreen error:', error);
+          // Ignore fullscreen errors
         }
       } else {
         // Enter fullscreen
         try {
           if (emulatorElement.requestFullscreen) {
-            emulatorElement.requestFullscreen().catch(err => {
-              console.log('Fullscreen request failed:', err);
-            });
+            emulatorElement.requestFullscreen().catch(() => {});
           } else if (emulatorElement.webkitRequestFullscreen) {
             emulatorElement.webkitRequestFullscreen();
           } else if (emulatorElement.mozRequestFullScreen) {
@@ -92,14 +88,13 @@
             emulatorElement.msRequestFullscreen();
           }
         } catch (error) {
-          console.log('Fullscreen error:', error);
+          // Ignore fullscreen errors
         }
       }
     }
     
     // Set up callbacks
     window.EJS_onGameStart = function() {
-      console.log('🎮 Game started in iframe');
       parent.postMessage({type: 'gameStarted'}, '*');
       
       // Add fullscreen toggle listeners after game starts
@@ -142,11 +137,7 @@
         toggleFullscreen();
       } else if (event.data.type === 'cloudSave') {
         // User clicked Cloud Save button - Trigger EmulatorJS save state and upload result
-        console.log('☁️ Cloud Save request received');
-        
         try {
-          console.log('☁️ Step 1: Finding EmulatorJS save state button...');
-          
           // Find EmulatorJS save state button
           const possibleButtons = document.querySelectorAll('button, input[type="button"], [role="button"]');
           let saveButton = null;
@@ -158,24 +149,16 @@
             if (text.toLowerCase().includes('save') && text.toLowerCase().includes('state') ||
                 onclick.includes('save') && onclick.includes('state') ||
                 button.title?.toLowerCase().includes('save state')) {
-              console.log('☁️ Found potential save state button:', {
-                text: text,
-                title: button.title,
-                onclick: onclick.substring(0, 100) + '...'
-              });
               saveButton = button;
               break;
             }
           }
           
           if (!saveButton) {
-            console.log('☁️ No save state button found, trying alternative methods...');
-            
             // Try to find any button with "save" in text
             for (const button of possibleButtons) {
               const text = button.textContent || button.title || button.alt || '';
               if (text.toLowerCase().includes('save')) {
-                console.log('☁️ Found save button:', text);
                 saveButton = button;
                 break;
               }
@@ -183,8 +166,6 @@
           }
           
           if (saveButton) {
-            console.log('☁️ Step 2: Setting up save dialog interception...');
-            
             // Intercept save dialog by overriding createElement and file download
             const originalCreateElement = document.createElement;
             const originalCreateObjectURL = URL.createObjectURL;
@@ -195,14 +176,11 @@
               const element = originalCreateElement.call(this, tagName);
               
               if (tagName.toLowerCase() === 'a' && !saveIntercepted) {
-                console.log('☁️ Intercepted anchor element creation for download');
-                
                 // Override href setter to catch blob URLs
                 const originalHrefSetter = Object.getOwnPropertyDescriptor(HTMLAnchorElement.prototype, 'href').set;
                 Object.defineProperty(element, 'href', {
                   set: function(value) {
                     if (value.startsWith('blob:') && !saveIntercepted) {
-                      console.log('☁️ Intercepted blob URL for save:', value);
                       saveIntercepted = true;
                       
                       // Fetch the blob data
@@ -210,11 +188,6 @@
                         .then(response => response.arrayBuffer())
                         .then(arrayBuffer => {
                           const saveData = new Uint8Array(arrayBuffer);
-                          console.log('☁️ Intercepted save data:', {
-                            size: saveData.length,
-                            header: new TextDecoder().decode(saveData.slice(0, 12)),
-                            fileName: this.download || 'save.state'
-                          });
                           
                           // Upload to cloud immediately
                           parent.postMessage({
@@ -225,14 +198,11 @@
                             fileName: this.download || 'save.state'
                           }, '*');
                           
-                          console.log('✅ Cloud save completed - intercepted file uploaded!');
-                          
                           // Restore original functions
                           document.createElement = originalCreateElement;
                           URL.createObjectURL = originalCreateObjectURL;
                         })
                         .catch(error => {
-                          console.error('☁️ Error fetching blob data:', error);
                           parent.postMessage({
                             type: 'cloudSaveError',
                             error: 'Failed to intercept save data: ' + error.message
@@ -258,22 +228,12 @@
               const url = originalCreateObjectURL.call(this, blob);
               
               if (blob instanceof Blob && blob.size > 100000 && !saveIntercepted) { // Likely a save state file
-                console.log('☁️ Intercepted blob creation for save:', {
-                  size: blob.size,
-                  type: blob.type
-                });
-                
                 // Read the blob data immediately
                 blob.arrayBuffer().then(arrayBuffer => {
                   const saveData = new Uint8Array(arrayBuffer);
                   const header = new TextDecoder().decode(saveData.slice(0, 12));
                   
                   if (header.startsWith('RASTATE')) {
-                    console.log('☁️ Detected save state blob:', {
-                      size: saveData.length,
-                      header: header
-                    });
-                    
                     saveIntercepted = true;
                     
                     // Upload to cloud
@@ -285,21 +245,17 @@
                       fileName: `${gameName}_${Date.now()}.state`
                     }, '*');
                     
-                    console.log('✅ Cloud save completed - blob intercepted and uploaded!');
-                    
                     // Restore original functions
                     document.createElement = originalCreateElement;
                     URL.createObjectURL = originalCreateObjectURL;
                   }
-                }).catch(error => {
-                  console.error('☁️ Error reading blob:', error);
+                }).catch(() => {
+                  // Ignore errors
                 });
               }
               
               return url;
             };
-            
-            console.log('☁️ Step 3: Clicking EmulatorJS save state button with interception...');
             
             // Click the save button
             const clickEvent = new MouseEvent('click', {
@@ -309,22 +265,17 @@
             });
             
             saveButton.dispatchEvent(clickEvent);
-            console.log('☁️ Save state button clicked, interception active...');
             
             // Safety restore after 10 seconds
             setTimeout(() => {
               if (document.createElement !== originalCreateElement) {
                 document.createElement = originalCreateElement;
-                console.log('☁️ Safety restore of createElement');
               }
               if (URL.createObjectURL !== originalCreateObjectURL) {
                 URL.createObjectURL = originalCreateObjectURL;
-                console.log('☁️ Safety restore of createObjectURL');
               }
               
               if (!saveIntercepted) {
-                console.log('☁️ No save intercepted after 10 seconds, trying filesystem method...');
-                
                 // Fallback to filesystem monitoring
                 const FS = window.EJS_emulator?.gameManager?.FS;
                 if (FS) {
@@ -333,8 +284,6 @@
                     const latestFile = stateFiles[stateFiles.length - 1]; // Assume last is newest
                     const fileData = FS.readFile('/' + latestFile);
                     
-                    console.log('☁️ Fallback: Using filesystem file:', latestFile);
-                    
                     parent.postMessage({
                       type: 'saveState',
                       slot: 0,
@@ -342,8 +291,6 @@
                       timestamp: Date.now(),
                       fileName: latestFile
                     }, '*');
-                    
-                    console.log('✅ Cloud save completed via fallback!');
                   } else {
                     parent.postMessage({
                       type: 'cloudSaveError',
@@ -355,7 +302,6 @@
             }, 10000);
             
           } else {
-            console.error('☁️ No save state button found');
             parent.postMessage({
               type: 'cloudSaveError',
               error: 'Could not find EmulatorJS save state button'
@@ -363,65 +309,34 @@
           }
           
         } catch (error) {
-          console.error('☁️ Cloud save error:', error);
           parent.postMessage({ type: 'cloudSaveError', error: error.message }, '*');
         }
         
       } else if (event.data.type === 'cloudLoadAndApply') {
         // User clicked Cloud Load button - Download file and trigger EmulatorJS load
-        console.log('☁️ Cloud Load request received');
         
         if (!event.data.saveData) {
-          console.error('☁️ No save data received');
           return;
         }
         
         try {
           let saveData = event.data.saveData;
           
-          console.log('☁️ Processing cloud data...', {
-            type: typeof saveData,
-            length: saveData ? saveData.length : 0
-          });
-          
           // saveData should already be Uint8Array from SaveManager
           if (!(saveData instanceof Uint8Array)) {
-            console.log('☁️ Converting to Uint8Array...');
             saveData = new Uint8Array(saveData);
           }
           
-          console.log('☁️ Final save data:', saveData.length, 'bytes');
-          
-          // Show first few bytes for debugging
-          const firstBytes = Array.from(saveData.slice(0, 20));
-          const headerText = new TextDecoder().decode(saveData.slice(0, 20));
-          console.log('☁️ First 20 bytes:', firstBytes);
-          console.log('☁️ Header text:', headerText);
-          
           // Step 1: Create blob and URL for the save file
-          console.log('☁️ Step 1: Creating blob URL for save file...');
           const blob = new Blob([saveData], { type: 'application/octet-stream' });
           const fileUrl = URL.createObjectURL(blob);
-          console.log('☁️ Created blob URL:', fileUrl);
           
-          // Step 2: Use downloaded file directly for EmulatorJS load button
-          console.log('☁️ Step 2: Using downloaded file directly for EmulatorJS...');
-          
-          // Don't write to filesystem, use the downloaded data directly
-          console.log('☁️ Downloaded file info:', {
-            size: saveData.length,
-            originalFileName: event.data.originalFileName,
-            header: new TextDecoder().decode(saveData.slice(0, 12))
-          });
-          
-          // Step 3: Wait for file write to complete, then trigger EmulatorJS load
+          // Step 2: Wait for file write to complete, then trigger EmulatorJS load
           setTimeout(() => {
-            console.log('☁️ Step 3: Triggering EmulatorJS load state...');
             
             // Check if EmulatorJS has load state functionality
             const Module = window.EJS_emulator?.Module;
             if (!Module) {
-              console.error('☁️ EmulatorJS Module not available');
               parent.postMessage({
                 type: 'cloudLoadError',
                 error: 'EmulatorJS Module not available'
@@ -434,7 +349,6 @@
             
             // Method 1: Try to simulate file input for load state
             try {
-              console.log('☁️ Method 1: Simulating file input...');
               
               // Create a temporary file input
               const fileInput = document.createElement('input');
@@ -465,19 +379,16 @@
               for (const selector of possibleLoadSelectors) {
                 const element = document.querySelector(selector);
                 if (element) {
-                  console.log('☁️ Found load element:', selector);
                   
                   if (element.tagName === 'INPUT' && element.type === 'file') {
                     // If it's a file input, set the files
                     element.files = dataTransfer.files;
                     element.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('☁️ Triggered file input change');
                     loadTriggered = true;
                     break;
                   } else {
                     // If it's a button, click it
                     element.click();
-                    console.log('☁️ Clicked load button');
                     loadTriggered = true;
                     break;
                   }
@@ -489,17 +400,15 @@
               
               if (loadTriggered) {
                 loadSuccess = true;
-                console.log('☁️ Load state triggered via UI element');
               }
               
             } catch (e) {
-              console.log('☁️ Method 1 failed:', e.message);
+              // Method 1 failed, continue to next method
             }
             
             // Method 2: Find and simulate EmulatorJS load button click
             if (!loadSuccess) {
               try {
-                console.log('☁️ Method 2: Finding and simulating EmulatorJS load button...');
                 
                 // Try to find the actual EmulatorJS load button and simulate click
                 const possibleButtons = document.querySelectorAll('button, input[type="button"], [role="button"]');
@@ -512,38 +421,24 @@
                   if (text.toLowerCase().includes('load') || 
                       onclick.includes('load') || 
                       button.title?.toLowerCase().includes('load')) {
-                    console.log('☁️ Found potential load button:', {
-                      text: text,
-                      title: button.title,
-                      onclick: onclick.substring(0, 100) + '...'
-                    });
                     loadButton = button;
                     break;
                   }
                 }
                 
                 if (loadButton) {
-                  console.log('☁️ Simulating click on EmulatorJS load button...');
                   
                   // First, check if this button triggers a file input
                   const fileInputs = document.querySelectorAll('input[type="file"]');
-                  console.log(`☁️ Found ${fileInputs.length} file inputs in DOM`);
                   
                   let stateFileInput = null;
                   
                   // Find file input that accepts .state files
                   for (let i = 0; i < fileInputs.length; i++) {
                     const input = fileInputs[i];
-                    console.log(`☁️ File input ${i}:`, {
-                      accept: input.accept,
-                      id: input.id,
-                      className: input.className,
-                      name: input.name
-                    });
                     
                     if (input.accept && (input.accept.includes('.state') || input.accept.includes('*') || input.accept === '')) {
                       stateFileInput = input;
-                      console.log(`☁️ Selected file input ${i} for state files`);
                       break;
                     }
                   }
@@ -551,67 +446,35 @@
                   // If no specific .state input found, use the first one
                   if (!stateFileInput && fileInputs.length > 0) {
                     stateFileInput = fileInputs[0];
-                    console.log('☁️ No specific .state input found, using first file input');
                   }
                   
                   if (stateFileInput) {
-                    console.log('☁️ Found file input for state files, providing downloaded file directly...');
                     
                     // Use the downloaded save data directly
                     const originalFileName = event.data.originalFileName || 'cloudload.state';
-                    
-                    console.log(`☁️ Using downloaded file directly:`);
-                    console.log(`☁️ File name: ${originalFileName}`);
-                    console.log(`☁️ File size: ${saveData.length} bytes`);
-                    console.log(`☁️ File header: "${new TextDecoder().decode(saveData.slice(0, 12))}"`);
-                    console.log(`☁️ First 20 bytes:`, Array.from(saveData.slice(0, 20)));
                     
                     // Create File object directly from downloaded data
                     const file = new File([saveData], originalFileName, {
                       type: 'application/octet-stream'
                     });
                     
-                    console.log(`☁️ Created File object from downloaded data:`, {
-                      name: file.name,
-                      size: file.size,
-                      type: file.type,
-                      lastModified: file.lastModified
-                    });
-                    
                     // Create DataTransfer to simulate file selection
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(file);
                     
-                    console.log(`☁️ DataTransfer created with ${dataTransfer.files.length} files`);
-                    console.log(`☁️ DataTransfer file:`, {
-                      name: dataTransfer.files[0].name,
-                      size: dataTransfer.files[0].size
-                    });
-                    
                     // Set the files property
                     stateFileInput.files = dataTransfer.files;
-                    console.log(`☁️ File input files set:`, {
-                      fileCount: stateFileInput.files.length,
-                      fileName: stateFileInput.files[0]?.name,
-                      fileSize: stateFileInput.files[0]?.size
-                    });
                     
                     // Trigger change event
                     const changeEvent = new Event('change', { bubbles: true });
                     stateFileInput.dispatchEvent(changeEvent);
                     
-                    console.log('☁️ Change event dispatched on file input');
-                    
                     // Also try input event
                     const inputEvent = new Event('input', { bubbles: true });
                     stateFileInput.dispatchEvent(inputEvent);
                     
-                    console.log('☁️ Input event dispatched on file input');
-                    
                     loadSuccess = true;
-                    console.log('☁️ Load should work now - downloaded file provided directly!');
                   } else {
-                    console.log('☁️ No file input found, intercepting file dialog...');
                     
                     // Method: Intercept file dialog by overriding file input creation
                     const originalCreateElement = document.createElement;
@@ -621,7 +484,6 @@
                       const element = originalCreateElement.call(this, tagName);
                       
                       if (tagName.toLowerCase() === 'input' && !fileInputIntercepted) {
-                        console.log('☁️ Intercepted input element creation');
                         
                         // Override the type setter to catch file inputs
                         const originalTypeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'type').set;
@@ -630,17 +492,13 @@
                             originalTypeSetter.call(this, value);
                             
                             if (value === 'file' && !fileInputIntercepted) {
-                              console.log('☁️ File input type set, intercepting...');
                               fileInputIntercepted = true;
                               
                               // Override click to prevent dialog
                               this.click = function() {
-                                console.log('☁️ File input click intercepted - preventing dialog');
                                 
                                 // Immediately provide our file instead of showing dialog
                                 const originalFileName = event.data.originalFileName || 'cloudload.state';
-                                
-                                console.log('☁️ Providing file automatically:', originalFileName);
                                 
                                 // Create File object from downloaded data
                                 const file = new File([saveData], originalFileName, {
@@ -658,8 +516,6 @@
                                 this.dispatchEvent(new Event('change', { bubbles: true }));
                                 this.dispatchEvent(new Event('input', { bubbles: true }));
                                 
-                                console.log('☁️ File provided automatically - no dialog shown');
-                                
                                 // Don't call original click - this prevents the dialog
                                 return false;
                               };
@@ -667,7 +523,6 @@
                               // Restore original createElement after a delay
                               setTimeout(() => {
                                 document.createElement = originalCreateElement;
-                                console.log('☁️ Restored original createElement');
                               }, 1000);
                             }
                           },
@@ -679,8 +534,6 @@
                       
                       return element;
                     };
-                    
-                    console.log('☁️ File dialog interception setup, clicking button...');
                     
                     // Now click the button - it should create a file input which we'll intercept
                     const clickEvent = new MouseEvent('click', {
@@ -695,22 +548,16 @@
                     setTimeout(() => {
                       if (document.createElement !== originalCreateElement) {
                         document.createElement = originalCreateElement;
-                        console.log('☁️ Safety restore of createElement');
                       }
                     }, 5000);
                     
                     loadSuccess = true;
-                    console.log('☁️ Load button clicked with file dialog interception!');
                   }
                 } else {
-                  console.log('☁️ No EmulatorJS load button found');
                   
                   // Try to access EJS_GameManager directly
                   if (window.EJS_emulator && window.EJS_emulator.gameManager) {
                     const gameManager = window.EJS_emulator.gameManager;
-                    console.log('☁️ Available gameManager methods:', Object.keys(gameManager).filter(key => 
-                      typeof gameManager[key] === 'function' && key.toLowerCase().includes('load')
-                    ));
                     
                     // Try different load methods
                     const loadMethods = ['loadState', 'load_state', 'loadSaveState', 'loadGameState'];
@@ -718,17 +565,14 @@
                     for (const method of loadMethods) {
                       if (gameManager[method]) {
                         try {
-                          console.log(`☁️ Trying gameManager.${method}()...`);
                           const result = gameManager[method]();
-                          console.log(`☁️ gameManager.${method}() result:`, result);
                           
                           if (result !== false && result !== undefined) {
                             loadSuccess = true;
-                            console.log(`☁️ Load successful via gameManager.${method}()`);
                             break;
                           }
                         } catch (e) {
-                          console.log(`☁️ gameManager.${method}() failed:`, e.message);
+                          // Continue to next method
                         }
                       }
                     }
@@ -736,51 +580,41 @@
                 }
                 
               } catch (e) {
-                console.log('☁️ Method 2 failed:', e.message);
+                // Method 2 failed, continue
               }
             }
             
             // Method 3: Use EJS_GameManager.loadState() like EmulatorJS button does
             if (!loadSuccess) {
               try {
-                console.log('☁️ Method 3: Using EJS_GameManager.loadState()...');
                 
                 if (window.EJS_emulator && window.EJS_emulator.gameManager && window.EJS_emulator.gameManager.loadState) {
-                  console.log('☁️ EJS_GameManager.loadState available, calling...');
                   
                   // This is exactly what EmulatorJS load button does
                   const gameManagerResult = window.EJS_emulator.gameManager.loadState();
-                  console.log('☁️ EJS_GameManager.loadState() result:', gameManagerResult);
                   
                   if (gameManagerResult !== false && gameManagerResult !== undefined) {
                     loadSuccess = true;
-                    console.log('☁️ Load state successful via EJS_GameManager - this should work like the button!');
                   }
-                } else {
-                  console.log('☁️ EJS_GameManager.loadState not available');
                 }
                 
               } catch (e) {
-                console.log('☁️ Method 3 failed:', e.message);
+                // Method 3 failed
               }
             }
             
             // Method 4: Try direct EmulatorJS functions with file data
             if (!loadSuccess) {
               try {
-                console.log('☁️ Method 4: Direct function calls...');
                 
                 // Try _load_state with slot 0
                 if (Module._load_state) {
                   const result = Module._load_state(0);
-                  console.log('☁️ _load_state(0) result:', result);
                   
                   if (result === 0) {
                     loadSuccess = true;
-                    console.log('☁️ Load state successful via direct call');
                     
                     // Since _load_state(0) is successful, force aggressive display refresh
-                    console.log('☁️ Forcing aggressive display refresh after successful load...');
                     
                     // Method A: Force multiple frame renders
                     for (let i = 0; i < 60; i++) {
@@ -803,7 +637,6 @@
                         setTimeout(() => {
                           canvas.width = originalWidth;
                           canvas.height = originalHeight;
-                          console.log('☁️ Forced canvas resize refresh');
                         }, 100);
                       }
                     }, 500);
@@ -812,7 +645,6 @@
                     setTimeout(() => {
                       window.dispatchEvent(new Event('resize'));
                       window.dispatchEvent(new Event('focus'));
-                      console.log('☁️ Triggered window events');
                     }, 200);
                     
                     // Method D: Force emulator to think it needs to redraw
@@ -831,15 +663,12 @@
                           (key.includes('display') || key.includes('render') || key.includes('draw'))
                         );
                         
-                        console.log('☁️ Available display functions:', displayFunctions);
-                        
                         // Try to call display functions
                         displayFunctions.forEach(funcName => {
                           try {
                             gameManager[funcName]();
-                            console.log(`☁️ Called ${funcName}()`);
                           } catch (e) {
-                            console.log(`☁️ ${funcName} failed:`, e.message);
+                            // Ignore errors
                           }
                         });
                       }
@@ -848,164 +677,21 @@
                 }
                 
               } catch (e) {
-                console.log('☁️ Method 2 failed:', e.message);
-              }
-            }
-            
-            // Method 3: Try to simulate F7 key press (common load state hotkey)
-            if (!loadSuccess) {
-              try {
-                console.log('☁️ Method 3: Simulating F7 key press...');
-                
-                const keyEvent = new KeyboardEvent('keydown', {
-                  key: 'F7',
-                  code: 'F7',
-                  keyCode: 118,
-                  which: 118,
-                  bubbles: true
-                });
-                
-                document.dispatchEvent(keyEvent);
-                
-                // Also try on canvas
-                const canvas = document.querySelector('canvas');
-                if (canvas) {
-                  canvas.dispatchEvent(keyEvent);
-                  canvas.focus();
-                }
-                
-                loadSuccess = true;
-                console.log('☁️ F7 key press simulated');
-                
-              } catch (e) {
-                console.log('☁️ Method 3 failed:', e.message);
-              }
-            }
-            
-            // Method 4: Try to access EmulatorJS internal load function
-            if (!loadSuccess) {
-              try {
-                console.log('☁️ Method 4: Accessing EmulatorJS internals...');
-                
-                // Check if we can access EJS_emulator object
-                if (window.EJS_emulator && window.EJS_emulator.gameManager) {
-                  const gameManager = window.EJS_emulator.gameManager;
-                  console.log('☁️ GameManager available:', !!gameManager);
-                  
-                  // Try to find load state function in gameManager
-                  const loadFunctions = Object.keys(gameManager).filter(key => 
-                    key.toLowerCase().includes('load') && typeof gameManager[key] === 'function'
-                  );
-                  console.log('☁️ Available load functions:', loadFunctions);
-                  
-                  // Try each load function
-                  for (const funcName of loadFunctions) {
-                    try {
-                      const result = gameManager[funcName](fileUrl);
-                      console.log(`☁️ ${funcName}(fileUrl) result:`, result);
-                      loadSuccess = true;
-                      break;
-                    } catch (e) {
-                      console.log(`☁️ ${funcName} failed:`, e.message);
-                    }
-                  }
-                }
-                
-              } catch (e) {
-                console.log('☁️ Method 4 failed:', e.message);
+                // Method 4 failed
               }
             }
             
             // Clean up blob URL after some time
             setTimeout(() => {
               URL.revokeObjectURL(fileUrl);
-              console.log('☁️ Cleaned up blob URL');
             }, 10000);
             
-            // Method 5: Debug and try load with specific filename
-            if (!loadSuccess) {
-              try {
-                console.log('☁️ Method 5: Debug and load with filename...');
-                
-                // List all available Module functions for debugging
-                const allFunctions = Object.keys(Module).filter(key => 
-                  typeof Module[key] === 'function' && 
-                  (key.includes('load') || key.includes('state'))
-                );
-                console.log('☁️ Available load/state functions:', allFunctions);
-                
-                // Prepare both filenames to try
-                const baseGameName = gameName.replace(/\.[^/.]+$/, '');
-                const expectedFileName = `/${baseGameName}.state`;
-                const filesToTry = [stateFileName];
-                
-                if (expectedFileName !== stateFileName) {
-                  filesToTry.push(expectedFileName);
-                }
-                
-                console.log('☁️ Files to try loading:', filesToTry);
-                
-                // Try different load functions with both filenames
-                const loadFunctions = ['_load_state_file', '_cmd_load_state_file', 'load_state_file'];
-                
-                for (const filename of filesToTry) {
-                  if (loadSuccess) break;
-                  
-                  console.log(`☁️ Trying filename: ${filename}`);
-                  
-                  for (const funcName of loadFunctions) {
-                    if (Module[funcName]) {
-                      try {
-                        const result = Module[funcName](filename);
-                        console.log(`☁️ ${funcName}("${filename}") result:`, result);
-                        if (result === 0) {
-                          loadSuccess = true;
-                          console.log(`☁️ Load successful via ${funcName} with ${filename}`);
-                          break;
-                        }
-                      } catch (e) {
-                        console.log(`☁️ ${funcName}("${filename}") failed:`, e.message);
-                      }
-                    }
-                  }
-                }
-                
-                // If still not successful, try to force refresh filesystem and retry
-                if (!loadSuccess) {
-                  console.log('☁️ Forcing filesystem refresh and retry...');
-                  
-                  // Try to refresh save files
-                  if (Module._refresh_save_files) {
-                    Module._refresh_save_files();
-                    console.log('☁️ Called _refresh_save_files');
-                    
-                    // Wait a bit then try load again
-                    setTimeout(() => {
-                      if (Module._load_state) {
-                        const retryResult = Module._load_state(0);
-                        console.log('☁️ Retry _load_state(0) after refresh:', retryResult);
-                        if (retryResult === 0) {
-                          loadSuccess = true;
-                          console.log('☁️ Load successful after filesystem refresh');
-                        }
-                      }
-                    }, 500);
-                  }
-                }
-                
-              } catch (e) {
-                console.log('☁️ Method 5 failed:', e.message);
-              }
-            }
-            
             if (loadSuccess) {
-              console.log('✅ Cloud load completed successfully!');
               parent.postMessage({
                 type: 'cloudLoadSuccess',
                 message: 'Save state loaded successfully from cloud!'
               }, '*');
             } else {
-              console.error('☁️ Could not trigger load state');
               parent.postMessage({
                 type: 'cloudLoadError',
                 error: 'Could not trigger EmulatorJS load state function'
@@ -1015,347 +701,10 @@
           }, 2000); // Wait 2 seconds for blob to be ready
           
         } catch (error) {
-          console.error('☁️ Load error:', error);
           parent.postMessage({
             type: 'cloudLoadError',
             error: error.message
           }, '*');
-        }
-      } else if (event.data.type === 'debugFilesystem') {
-        // Debug filesystem - list all files
-        console.log('🔍 Debug Filesystem request received');
-        
-        try {
-          const FS = window.EJS_emulator?.gameManager?.FS;
-          if (!FS) {
-            console.error('🔍 EmulatorJS filesystem not available');
-            return;
-          }
-          
-          console.log('🔍 === EmulatorJS Filesystem Debug ===');
-          
-          // List root directory
-          try {
-            const files = FS.readdir('/');
-            console.log('🔍 Root directory files:', files.length);
-            
-            files.forEach(file => {
-              try {
-                const fullPath = '/' + file;
-                const stat = FS.stat(fullPath);
-                
-                // Check if it's a file or directory using different method
-                const isDirectory = stat.mode && (stat.mode & 0o040000) !== 0; // S_IFDIR
-                const isFile = stat.mode && (stat.mode & 0o100000) !== 0; // S_IFREG
-                
-                if (isFile) {
-                  console.log(`🔍 FILE: ${file} (${stat.size} bytes)`);
-                  
-                  // If it's a .state file, show more details
-                  if (file.endsWith('.state')) {
-                    try {
-                      const fileData = FS.readFile(fullPath);
-                      const header = new TextDecoder().decode(fileData.slice(0, 12));
-                      console.log(`🔍   -> Header: "${header}" (${fileData.length} bytes)`);
-                    } catch (e) {
-                      console.log(`🔍   -> Could not read file: ${e.message}`);
-                    }
-                  }
-                } else if (isDirectory) {
-                  console.log(`🔍 DIR:  ${file}/`);
-                  
-                  // List subdirectory contents
-                  try {
-                    const subFiles = FS.readdir(fullPath);
-                    subFiles.forEach(subFile => {
-                      try {
-                        const subPath = fullPath + '/' + subFile;
-                        const subStat = FS.stat(subPath);
-                        const subIsFile = subStat.mode && (subStat.mode & 0o100000) !== 0;
-                        
-                        if (subIsFile) {
-                          console.log(`🔍   -> ${subFile} (${subStat.size} bytes)`);
-                          
-                          // If it's a .state file in subdirectory
-                          if (subFile.endsWith('.state')) {
-                            try {
-                              const subFileData = FS.readFile(subPath);
-                              const subHeader = new TextDecoder().decode(subFileData.slice(0, 12));
-                              console.log(`🔍     -> Header: "${subHeader}"`);
-                            } catch (e) {
-                              console.log(`🔍     -> Could not read: ${e.message}`);
-                            }
-                          }
-                        } else {
-                          console.log(`🔍   -> ${subFile}/`);
-                        }
-                      } catch (e) {
-                        console.log(`🔍   -> ${subFile} (error: ${e.message})`);
-                      }
-                    });
-                  } catch (e) {
-                    console.log(`🔍   -> Could not list directory: ${e.message}`);
-                  }
-                } else {
-                  // Try to read as file anyway
-                  try {
-                    const fileData = FS.readFile(fullPath);
-                    console.log(`🔍 FILE: ${file} (${fileData.length} bytes) [detected as file]`);
-                    
-                    if (file.endsWith('.state')) {
-                      const header = new TextDecoder().decode(fileData.slice(0, 12));
-                      console.log(`🔍   -> Header: "${header}"`);
-                    }
-                  } catch (e) {
-                    console.log(`🔍 UNKNOWN: ${file} (mode: ${stat.mode}, size: ${stat.size})`);
-                  }
-                }
-              } catch (e) {
-                console.log(`🔍 ERROR: ${file} - ${e.message}`);
-              }
-            });
-            
-            console.log('🔍 === End Filesystem Debug ===');
-            
-          } catch (e) {
-            console.error('🔍 Could not list root directory:', e.message);
-          }
-          
-        } catch (error) {
-          console.error('🔍 Debug filesystem error:', error);
-        }
-      } else if (event.data.type === 'debugLoadState') {
-        // Debug load state functions - test all available load functions
-        console.log('🧪 Debug Load State request received');
-        
-        try {
-          const Module = window.EJS_emulator?.Module;
-          if (!Module) {
-            console.error('🧪 EmulatorJS Module not available');
-            return;
-          }
-          
-          const FS = window.EJS_emulator?.gameManager?.FS;
-          if (!FS) {
-            console.error('🧪 EmulatorJS filesystem not available');
-            return;
-          }
-          
-          console.log('🧪 === EmulatorJS Load State Debug ===');
-          
-          // List all available functions
-          const allFunctions = Object.keys(Module);
-          const loadFunctions = allFunctions.filter(key => 
-            typeof Module[key] === 'function' && 
-            (key.toLowerCase().includes('load') || key.toLowerCase().includes('state'))
-          );
-          console.log('🧪 All load/state functions:', loadFunctions);
-          
-          // Find .state files in filesystem
-          const files = FS.readdir('/');
-          const stateFiles = files.filter(file => file.endsWith('.state'));
-          console.log('🧪 Available .state files:', stateFiles);
-          
-          if (stateFiles.length === 0) {
-            console.log('🧪 No .state files found in filesystem');
-            return;
-          }
-          
-          // Test each load function with each state file
-          for (const stateFile of stateFiles) {
-            console.log(`🧪 Testing with file: ${stateFile}`);
-            
-            const fullPath = '/' + stateFile;
-            
-            // Test basic load functions
-            const testFunctions = [
-              '_load_state',
-              '_cmd_load_state', 
-              'load_state',
-              '_load_state_file',
-              '_cmd_load_state_file',
-              'load_state_file'
-            ];
-            
-            for (const funcName of testFunctions) {
-              if (Module[funcName]) {
-                try {
-                  console.log(`🧪 Testing ${funcName}...`);
-                  
-                  let result;
-                  if (funcName.includes('_file') || funcName.includes('file')) {
-                    // Functions that take filename parameter
-                    result = Module[funcName](fullPath);
-                    console.log(`🧪 ${funcName}("${fullPath}") = ${result}`);
-                  } else {
-                    // Functions that take slot number
-                    result = Module[funcName](0);
-                    console.log(`🧪 ${funcName}(0) = ${result}`);
-                  }
-                  
-                  // Check if result indicates success
-                  if (result === 0) {
-                    console.log(`✅ ${funcName} returned SUCCESS (0)`);
-                  } else if (result === 1) {
-                    console.log(`❌ ${funcName} returned FAIL (1)`);
-                  } else if (result === undefined) {
-                    console.log(`❓ ${funcName} returned UNDEFINED`);
-                  } else {
-                    console.log(`❓ ${funcName} returned ${result} (unknown)`);
-                  }
-                  
-                } catch (e) {
-                  console.log(`❌ ${funcName} threw error: ${e.message}`);
-                }
-              } else {
-                console.log(`❌ ${funcName} not available`);
-              }
-            }
-            
-            console.log(`🧪 --- End testing with ${stateFile} ---`);
-          }
-          
-          // Test some additional functions that might be relevant
-          console.log('🧪 Testing additional functions...');
-          
-          const additionalFunctions = [
-            '_refresh_save_files',
-            '_cmd_savefiles', 
-            '_save_state_info',
-            '_supports_states'
-          ];
-          
-          for (const funcName of additionalFunctions) {
-            if (Module[funcName]) {
-              try {
-                const result = Module[funcName]();
-                console.log(`🧪 ${funcName}() = ${result}`);
-              } catch (e) {
-                console.log(`❌ ${funcName} error: ${e.message}`);
-              }
-            }
-          }
-          
-          console.log('🧪 === End Load State Debug ===');
-          
-        } catch (error) {
-          console.error('🧪 Debug load state error:', error);
-        }
-      } else if (event.data.type === 'interceptLoadState') {
-        // Intercept EmulatorJS load state button to see what it does differently
-        console.log('🕵️ Intercept Load State request received');
-        
-        try {
-          const Module = window.EJS_emulator?.Module;
-          if (!Module) {
-            console.error('🕵️ EmulatorJS Module not available');
-            return;
-          }
-          
-          console.log('🕵️ === Intercepting EmulatorJS Load State ===');
-          
-          // First, let's hook into the _load_state function to see when it's called
-          const original_load_state = Module._load_state;
-          
-          Module._load_state = function(slot) {
-            console.log(`🕵️ INTERCEPTED: _load_state(${slot}) called`);
-            console.log('🕵️ Call stack:', new Error().stack);
-            
-            const result = original_load_state.call(this, slot);
-            console.log(`🕵️ INTERCEPTED: _load_state(${slot}) returned:`, result);
-            
-            return result;
-          };
-          
-          // Also hook into other potential functions
-          if (Module._cmd_run_frame) {
-            const original_run_frame = Module._cmd_run_frame;
-            let frameCallCount = 0;
-            
-            Module._cmd_run_frame = function() {
-              frameCallCount++;
-              if (frameCallCount <= 10) { // Only log first 10 calls to avoid spam
-                console.log(`🕵️ INTERCEPTED: _cmd_run_frame() called (${frameCallCount})`);
-              }
-              return original_run_frame.call(this);
-            };
-          }
-          
-          // Hook into refresh functions
-          if (Module._refresh_save_files) {
-            const original_refresh = Module._refresh_save_files;
-            
-            Module._refresh_save_files = function() {
-              console.log('🕵️ INTERCEPTED: _refresh_save_files() called');
-              return original_refresh.call(this);
-            };
-          }
-          
-          // Now let's find and monitor EmulatorJS UI buttons
-          console.log('🕵️ Looking for EmulatorJS load state buttons...');
-          
-          // Common selectors for load state buttons
-          const possibleSelectors = [
-            '[title*="Load"]', '[title*="load"]', 
-            '.ejs-load-state', '[onclick*="load"]',
-            'button[title*="Load"]', 'input[title*="Load"]',
-            '[data-action="load"]', '.load-state-btn',
-            'input[type="file"]', '[accept*=".state"]'
-          ];
-          
-          const foundElements = [];
-          
-          for (const selector of possibleSelectors) {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(element => {
-              foundElements.push({
-                selector: selector,
-                element: element,
-                tagName: element.tagName,
-                type: element.type,
-                title: element.title,
-                onclick: element.onclick ? element.onclick.toString() : null,
-                className: element.className
-              });
-            });
-          }
-          
-          console.log('🕵️ Found potential load elements:', foundElements);
-          
-          // Add event listeners to monitor clicks
-          foundElements.forEach((item, index) => {
-            const element = item.element;
-            
-            // Add click listener
-            element.addEventListener('click', function(e) {
-              console.log(`🕵️ CLICK INTERCEPTED on element ${index}:`, {
-                selector: item.selector,
-                tagName: item.tagName,
-                type: item.type,
-                title: item.title
-              });
-            }, true); // Use capture phase
-            
-            // Add change listener for file inputs
-            if (element.tagName === 'INPUT' && element.type === 'file') {
-              element.addEventListener('change', function(e) {
-                console.log(`🕵️ FILE CHANGE INTERCEPTED on element ${index}:`, {
-                  files: e.target.files,
-                  fileCount: e.target.files.length
-                });
-                
-                if (e.target.files.length > 0) {
-                  console.log('🕵️ File selected:', e.target.files[0].name);
-                }
-              }, true);
-            }
-          });
-          
-          console.log('🕵️ Interception setup complete. Now try using EmulatorJS load state button.');
-          console.log('🕵️ === End Intercept Setup ===');
-          
-        } catch (error) {
-          console.error('🕵️ Intercept load state error:', error);
         }
       }
     });

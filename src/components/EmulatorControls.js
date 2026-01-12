@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const EmulatorControls = ({
   selectedFile,
@@ -8,7 +8,6 @@ const EmulatorControls = ({
   onFileSelect,
   onStartGame,
   onGoHome,
-  onTestError,
   onCloudSave,
   onCloudLoad,
   onCloudDownload,
@@ -17,14 +16,6 @@ const EmulatorControls = ({
   onInterceptLoadState,
   isLoggedIn
 }) => {
-  // Debug button visibility
-  console.log('🎮 EmulatorControls Render:', { 
-    isGameLoaded, 
-    isLoggedIn, 
-    hasFile: !!selectedFile, 
-    isGameStarted,
-    showCloudButtons: isGameLoaded && isLoggedIn
-  });
 
   const [showTips, setShowTips] = useState(false);
   const [isClosing, setIsClosing] = useState(false);

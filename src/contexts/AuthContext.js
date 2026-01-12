@@ -59,7 +59,6 @@ export const AuthProvider = ({ children }) => {
       // Always try real Supabase first if available
       if (supabase && supabase.auth && typeof supabase.auth.signInWithPassword === 'function') {
         try {
-          console.log('🔄 Attempting real Supabase login...');
           const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
@@ -90,13 +89,11 @@ export const AuthProvider = ({ children }) => {
             return { success: false, error: errorMessage };
           }
 
-          console.log('✅ Real Supabase login successful');
           return { success: true, user: data.user };
           
         } catch (networkError) {
           if (networkError.message === 'NETWORK_ERROR' || 
               networkError.message.includes('Failed to fetch')) {
-            console.log('🔧 Falling back to mock login due to network issues');
             // Fall through to mock login
           } else {
             throw networkError;
@@ -105,7 +102,6 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Mock login fallback
-      console.log('🔧 Using mock login mode');
       
       // Simple mock validation
       if (email && password && password.length >= 6) {
@@ -117,7 +113,6 @@ export const AuthProvider = ({ children }) => {
         };
         
         setUser(mockUser);
-        console.log('✅ Mock login successful:', mockUser.email);
         return { 
           success: true, 
           user: mockUser,
@@ -149,7 +144,6 @@ export const AuthProvider = ({ children }) => {
       
       // Check if this is mock mode
       if (!supabase.auth.signUp.toString().includes('createClient')) {
-        console.log('🔧 Mock register mode - Supabase not configured');
         
         const mockUser = {
           id: 'mock-user-' + Date.now(),
@@ -215,7 +209,6 @@ export const AuthProvider = ({ children }) => {
     try {
       // For mock mode, just clear user
       if (!supabase.auth.signOut.toString().includes('createClient')) {
-        console.log('🔧 Mock logout mode');
         setUser(null);
         return { success: true };
       }

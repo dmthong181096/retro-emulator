@@ -32,13 +32,11 @@ const UserProfile = () => {
     try {
       const result = await logout();
       if (result.success) {
-        console.log('✅ Đăng xuất thành công');
+        // Đăng xuất thành công
       } else {
-        console.error('❌ Lỗi đăng xuất:', result.error);
         alert('Lỗi đăng xuất: ' + result.error);
       }
     } catch (error) {
-      console.error('❌ Lỗi đăng xuất:', error);
       alert('Lỗi đăng xuất');
     } finally {
       setIsLoggingOut(false);
