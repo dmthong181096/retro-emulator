@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllConsoles } from '../config/Config';
+import { recentGamesManager } from '../services/RecentGames';
 import Layout from '../components/Layout';
 import FloatingElements from '../components/FloatingElements';
 import ConsoleCard from '../components/ConsoleCard';
@@ -15,13 +16,15 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // Add stagger animation to cards
-    const cards = document.querySelectorAll('.console-card');
-    cards.forEach((card, index) => {
-      setTimeout(() => {
-        card.classList.add('animate');
-      }, index * 100);
-    });
+    // Add stagger animation to console cards only
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.console-card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.classList.add('animate');
+        }, index * 100);
+      });
+    }, 800); // Start after recent games animation
   }, []);
 
   return (

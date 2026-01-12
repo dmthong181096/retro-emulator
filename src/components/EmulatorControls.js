@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const EmulatorControls = ({
   selectedFile,
@@ -8,19 +8,42 @@ const EmulatorControls = ({
   onFileSelect,
   onStartGame,
   onGoHome,
+  onTestError,
   onCloudSave,
   onCloudLoad,
   onCloudDownload,
   onDebugFilesystem,
   onDebugLoadState,
   onInterceptLoadState,
-  isLoggedIn
+  isLoggedIn,
+  cloudSaveStatus,
+  cloudLoadStatus
 }) => {
 
   const [showTips, setShowTips] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Auto-hide success messages after 3 seconds
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [showLoadSuccess, setShowLoadSuccess] = useState(false);
+
+  // Update success states based on props
+  useEffect(() => {
+    if (cloudSaveStatus === 'success') {
+      setShowSaveSuccess(true);
+      setTimeout(() => setShowSaveSuccess(false), 3000);
+    }
+  }, [cloudSaveStatus]);
+
+  useEffect(() => {
+    if (cloudLoadStatus === 'success') {
+      setShowLoadSuccess(true);
+      setTimeout(() => setShowLoadSuccess(false), 3000);
+    }
+  }, [cloudLoadStatus]);
 
   const handleCloseTips = () => {
     setIsClosing(true);
@@ -35,6 +58,8 @@ const EmulatorControls = ({
     setIsSaving(true);
     try {
       await onCloudSave();
+    } catch (error) {
+      // Error will be handled by parent component
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }
@@ -45,8 +70,22 @@ const EmulatorControls = ({
     setIsLoading(true);
     try {
       await onCloudLoad();
+    } catch (error) {
+      // Error will be handled by parent component
     } finally {
       setTimeout(() => setIsLoading(false), 1000);
+    }
+  };
+
+  const handleCloudDownload = async () => {
+    if (!onCloudDownload) return;
+    setIsDownloading(true);
+    try {
+      await onCloudDownload();
+    } catch (error) {
+      // Error will be handled by parent component
+    } finally {
+      setTimeout(() => setIsDownloading(false), 1000);
     }
   };
 
@@ -128,11 +167,11 @@ const EmulatorControls = ({
 
             <button
               className="control-btn cloud-download-btn"
-              onClick={onCloudDownload}
-              disabled={!isLoggedIn}
+              onClick={handleCloudDownload}
+              disabled={isDownloading || !isLoggedIn}
               title={!isLoggedIn ? "Vui lòng đăng nhập để tải file" : "Tải file save state về máy"}
             >
-              📥 Tải File
+              {isDownloading ? '⏳ Đang tải...' : '📥 Tải File'}
             </button>
 
             {/* Debug buttons - only show in development */}
@@ -172,6 +211,40 @@ const EmulatorControls = ({
                 <small>💡 Đăng nhập để sử dụng Cloud Save/Load</small>
               </div>
             )}
+
+            {/* Success Messages */}
+            {showSaveSuccess && (
+              <div className="success-message">
+                <span className="success-icon">✅</span>
+                <span>Đã lưu lên cloud thành công!</span>
+              </div>
+            )}
+
+            {showLoadSuccess && (
+              <div className="success-message">
+                <span className="success-icon">✅</span>
+                <span>Đã tải từ cloud thành công!</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Loading Overlay */}
+        {(isSaving || isLoading || isDownloading) && (
+          <div className="loading-overlay">
+            <div className="loading-content">
+              <div className="loading-spinner"></div>
+              <div className="loading-text">
+                {isSaving && "Đang lưu lên cloud..."}
+                {isLoading && "Đang tải từ cloud..."}
+                {isDownloading && "Đang tải file..."}
+              </div>
+              <div className="loading-progress">
+                <div className="progress-bar">
+                  <div className="progress-fill"></div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

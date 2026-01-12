@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getConsoleById, getConsoleCore } from '../config/Config';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,9 @@ const EmulatorPage = () => {
   const [error, setError] = useState(null);
   const [showFloatingElements, setShowFloatingElements] = useState(true);
   const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const [cloudSaveStatus, setCloudSaveStatus] = useState(null); // 'success', 'error', null
+  const [cloudLoadStatus, setCloudLoadStatus] = useState(null); // 'success', 'error', null
+  const autoLoadProcessed = useRef(false); // Flag to prevent multiple auto-loads
 
   const currentConsole = getConsoleById(consoleType) || { 
     name: 'Unknown Console', 
@@ -32,7 +35,11 @@ const EmulatorPage = () => {
   // Check if this is a resume request
   const resumeData = location.state?.resumeGame ? {
     gameName: location.state.gameName,
-    consoleType: location.state.consoleType
+    consoleType: location.state.consoleType,
+    autoLoadFile: location.state.autoLoadFile,
+    fileMatched: location.state.fileMatched,
+    autoLoaded: location.state.autoLoaded,
+    method: location.state.method
   } : null;
 
   useEffect(() => {
@@ -69,6 +76,9 @@ const EmulatorPage = () => {
       setIsGameLoaded(false);
       setError(null);
       
+      // Reset auto-load flag
+      autoLoadProcessed.current = false;
+      
       // Cleanup game container (iframe will be destroyed automatically)
       const gameContainer = document.getElementById('gameContainer');
       if (gameContainer) {
@@ -92,21 +102,7 @@ const EmulatorPage = () => {
     return cleanup;
   }, []);
 
-  // Handle resume functionality
-  useEffect(() => {
-    if (resumeData) {
-      // Show a message that this is a resume request
-      // In a real implementation, you might want to:
-      // 1. Show the last played ROM file name
-      // 2. Auto-load the save state
-      // 3. Pre-select the file if it's still available
-      
-      // For now, just show a message
-      setError(`Tiếp tục chơi: ${resumeData.gameName}\nVui lòng chọn lại ROM file để tiếp tục.`);
-    }
-  }, [resumeData]);
-
-  const handleFileSelect = (event) => {
+  const handleFileSelect = async (event) => {
     const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
@@ -118,18 +114,99 @@ const EmulatorPage = () => {
     }
   };
 
-  const startGame = () => {
-    if (!selectedFile) {
+  // Handle save state to cloud
+  const handleSaveState = useCallback(async (slot, saveData) => {
+    // Ensure SaveManager is initialized with latest user state
+    if (user && selectedFile) {
+        // Always refresh the save manager context to be safe
+        saveManager.initialize(user, selectedFile.name, consoleType);
+    }
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const result = await saveManager.saveToCloud(slot, saveData);
+      
+      if (result.success) {
+        if (result.fallback) {
+          // Save slot saved with fallback
+        } else {
+          // Save slot uploaded to cloud successfully
+        }
+      } else {
+        // If it failed due to user not logged in (race condition?), try one more time
+        if (result.error === 'User not logged in' && user) {
+             saveManager.initialize(user, selectedFile.name, consoleType);
+             await saveManager.saveToCloud(slot, saveData);
+        }
+      }
+    } catch (error) {
+      // Save error
+    }
+  }, [user, selectedFile, consoleType]);
+
+  // Mobile detection function
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           ('ontouchstart' in window);
+  };
+
+  // Scroll to center emulator on desktop
+  const scrollToEmulator = () => {
+    const emulatorContainer = document.querySelector('.emulator-container');
+    if (emulatorContainer) {
+      emulatorContainer.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  };
+
+  const startGame = useCallback(async (skipRecentGameSave = false, fileToUse = null) => {
+    const gameFile = fileToUse || selectedFile;
+    console.log('🎯 startGame called with skipRecentGameSave:', skipRecentGameSave);
+    console.log('🎯 fileToUse:', fileToUse ? fileToUse.name : 'null');
+    console.log('🎯 selectedFile:', selectedFile ? selectedFile.name : 'null');
+    console.log('🎯 gameFile:', gameFile ? gameFile.name : 'null');
+    
+    if (!gameFile) {
+      console.log('❌ No gameFile, showing error');
       setError('Vui lòng chọn ROM file trước khi bắt đầu chơi!');
       return;
     }
 
+    console.log('🎯 Setting game started...');
     setIsGameStarted(true);
     setError(null);
     
-    // Track recent game
-    const gameName = selectedFile.name.replace(/\.[^/.]+$/, ""); // Remove file extension
-    recentGamesManager.addRecentGame(gameName, consoleType, consoleType);
+    // Set selectedFile if we're using a different file
+    if (fileToUse && fileToUse !== selectedFile) {
+      console.log('🎯 Setting selectedFile to fileToUse');
+      setSelectedFile(fileToUse);
+    }
+    
+    // Track recent game with file info (async) - skip if this is an auto-load
+    if (!skipRecentGameSave) {
+      const gameName = gameFile.name.replace(/\.[^/.]+$/, ""); // Remove file extension
+      console.log('💾 Adding recent game with file info:', {
+        gameName,
+        fileName: gameFile.name,
+        fileSize: gameFile.size,
+        fileType: gameFile.type
+      });
+      
+      try {
+        await recentGamesManager.addRecentGame(gameName, consoleType, consoleType, gameFile);
+        console.log('✅ Recent game added successfully');
+      } catch (error) {
+        console.error('❌ Failed to add recent game:', error);
+        // Continue anyway - this shouldn't block game start
+      }
+    } else {
+      console.log('⏭️ Skipping recent game save (auto-load)');
+    }
     
     // Scroll to emulator immediately for both desktop and mobile
     setTimeout(() => {
@@ -140,7 +217,7 @@ const EmulatorPage = () => {
     setTimeout(() => {
       try {        
         // Create object URL for the file
-        const gameUrl = URL.createObjectURL(selectedFile);
+        const gameUrl = URL.createObjectURL(gameFile);
         
         // Clear any existing content
         const gameContainer = document.getElementById('gameContainer');
@@ -160,8 +237,8 @@ const EmulatorPage = () => {
         const params = new URLSearchParams({
           gameUrl: gameUrl,
           core: getConsoleCore(consoleType),
-          gameId: `${selectedFile.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`,
-          gameName: selectedFile.name
+          gameId: `${gameFile.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`,
+          gameName: gameFile.name
         });
         
         iframe.src = `/emulator-iframe.html?${params.toString()}`;
@@ -183,8 +260,8 @@ const EmulatorPage = () => {
             setShowFloatingElements(false);
             
             // Initialize save manager with user and game info
-            if (user && selectedFile) {
-              saveManager.initialize(user, selectedFile.name, consoleType);
+            if (user && gameFile) {
+              saveManager.initialize(user, gameFile.name, consoleType);
               
               // List existing saves
               setTimeout(async () => {
@@ -217,19 +294,35 @@ const EmulatorPage = () => {
             
           } else if (event.data.type === 'saveState') {
             // Cloud save from our button
+            setCloudSaveStatus('success');
             handleSaveState(event.data.slot, event.data.data);
+            // Show success toast
+            if (window.showToast) {
+              window.showToast('Đã lưu game lên cloud thành công!', 'success');
+            }
             
           } else if (event.data.type === 'cloudSaveError') {
             // Cloud save error
+            setCloudSaveStatus('error');
             setError(`Lỗi Cloud Save: ${event.data.error}`);
+            if (window.showToast) {
+              window.showToast('Lỗi khi lưu lên cloud', 'error');
+            }
             
           } else if (event.data.type === 'cloudLoadSuccess') {
             // Cloud load success
-            // Could show a success message or notification here
+            setCloudLoadStatus('success');
+            if (window.showToast) {
+              window.showToast('Đã tải game từ cloud thành công!', 'success');
+            }
             
           } else if (event.data.type === 'cloudLoadError') {
             // Cloud load error
+            setCloudLoadStatus('error');
             setError(`Lỗi Cloud Load: ${event.data.error}`);
+            if (window.showToast) {
+              window.showToast('Lỗi khi tải từ cloud', 'error');
+            }
           }
         };
         
@@ -245,7 +338,50 @@ const EmulatorPage = () => {
         setError(`Lỗi khi khởi tạo game: ${error.message || 'Lỗi không xác định'}`);
       }
     }, 300);
-  };
+  }, [selectedFile, consoleType, user, handleSaveState]);
+
+  // Handle resume functionality
+  useEffect(() => {
+    console.log('🔍 Resume data received:', resumeData);
+    console.log('🔍 autoLoadProcessed.current:', autoLoadProcessed.current);
+    
+    if (resumeData && resumeData.autoLoadFile && !autoLoadProcessed.current) {
+      // Only run once when we have autoLoadFile
+      autoLoadProcessed.current = true; // Mark as processed
+      
+      console.log('🔍 Auto-load file found:', resumeData.autoLoadFile.name);
+      
+      // Automatically set the file
+      setSelectedFile(resumeData.autoLoadFile);
+      
+      if (resumeData.fileMatched) {
+        // File matched perfectly, show success message
+        console.log('✅ File matched perfectly, auto-starting...');
+        if (window.showToast) {
+          window.showToast(`🎮 Đã tự động tải: ${resumeData.gameName}`, 'success');
+        }
+        // Auto-start the game after a short delay
+        setTimeout(() => {
+          console.log('🚀 Starting auto-loaded game...');
+          console.log('🎯 About to call startGame with file:', resumeData.autoLoadFile.name);
+          // Pass the file directly to startGame
+          startGame(true, resumeData.autoLoadFile); // Skip recent game save, use auto-loaded file
+        }, 1500);
+      } else {
+        // File didn't match but user confirmed, show warning
+        console.log('⚠️ File mismatch but user confirmed');
+        if (window.showToast) {
+          window.showToast(`⚠️ File khác với file gốc nhưng vẫn có thể chơi`, 'warning');
+        }
+        setError(`File được chọn khác với file gốc.\nNhấn "Chơi Game" để tiếp tục.`);
+      }
+    } else if (resumeData && !resumeData.autoLoadFile && !autoLoadProcessed.current) {
+      // No auto-load file, show manual selection message
+      autoLoadProcessed.current = true; // Mark as processed
+      console.log('ℹ️ No auto-load file, showing manual selection message');
+      setError(`Tiếp tục chơi: ${resumeData.gameName}\nVui lòng chọn lại ROM file để tiếp tục.`);
+    }
+  }, [resumeData, startGame]); // Keep startGame dependency but add more logging
 
   const handleCloseError = () => {
     setError(null);
@@ -278,70 +414,23 @@ const EmulatorPage = () => {
     
     testGames.forEach((game, index) => {
       setTimeout(() => {
-        recentGamesManager.addRecentGame(game.name, game.console, game.console);
+        // Create mock file info for testing
+        const mockFile = {
+          name: `${game.name}.${game.console === 'gba' ? 'gba' : 'rom'}`,
+          size: Math.floor(Math.random() * 10000000) + 1000000, // Random size 1-10MB
+          lastModified: Date.now() - (index * 86400000), // Different dates
+          type: 'application/octet-stream'
+        };
+        
+        recentGamesManager.addRecentGame(game.name, game.console, game.console, mockFile);
       }, index * 100);
     });
     
-    alert('Added test games to recent games list! Go to home page to see them.');
+    alert('Added test games with file info to recent games list! Go to home page to see them.');
   };
 
   const goHome = () => {
     navigate('/');
-  };
-
-  // Mobile detection function
-  const isMobileDevice = () => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           ('ontouchstart' in window);
-  };
-
-  // Scroll to center emulator on desktop
-  const scrollToEmulator = () => {
-    const emulatorContainer = document.querySelector('.emulator-container');
-    if (emulatorContainer) {
-      emulatorContainer.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-    }
-  };
-
-  // Handle save state to cloud
-  const handleSaveState = async (slot, saveData) => {
-    // Parse slot number if it's an object
-    const actualSlot = typeof slot === 'object' ? 
-      (slot.slot || slot.id || slot.number || 0) : 
-      slot;
-
-    // Ensure SaveManager is initialized with latest user state
-    if (user && selectedFile) {
-        // Always refresh the save manager context to be safe
-        saveManager.initialize(user, selectedFile.name, consoleType);
-    }
-
-    if (!user) {
-      return;
-    }
-
-    try {
-      const result = await saveManager.saveToCloud(slot, saveData);
-      
-      if (result.success) {
-        if (result.fallback) {
-          // Save slot saved with fallback
-        } else {
-          // Save slot uploaded to cloud successfully
-        }
-      } else {
-        // If it failed due to user not logged in (race condition?), try one more time
-        if (result.error === 'User not logged in' && user) {
-             saveManager.initialize(user, selectedFile.name, consoleType);
-             await saveManager.saveToCloud(slot, saveData);
-        }
-      }
-    } catch (error) {
-      // Save error
-    }
   };
 
   // Toggle fullscreen for floating button
@@ -354,9 +443,12 @@ const EmulatorPage = () => {
 
   // Cloud Save - force save current state and upload to cloud
   const handleCloudSave = async () => {
+    setCloudSaveStatus(null); // Reset status
     
     const iframe = document.querySelector('#gameContainer iframe');
     if (!iframe) {
+      setCloudSaveStatus('error');
+      setError('Không tìm thấy game để lưu');
       return;
     }
 
@@ -405,6 +497,9 @@ const EmulatorPage = () => {
     
     if (!user) {
       setError('Vui lòng đăng nhập để tải file');
+      if (window.showToast) {
+        window.showToast('Vui lòng đăng nhập để tải file', 'warning');
+      }
       return;
     }
 
@@ -418,6 +513,9 @@ const EmulatorPage = () => {
       
       if (!result.success) {
         setError('Không tìm thấy save file trên cloud');
+        if (window.showToast) {
+          window.showToast('Không tìm thấy save file trên cloud', 'warning');
+        }
         return;
       }
 
@@ -438,15 +536,25 @@ const EmulatorPage = () => {
       // Clean up
       URL.revokeObjectURL(url);
       
+      if (window.showToast) {
+        window.showToast('File đã được tải về thành công!', 'success');
+      }
+      
     } catch (error) {
       setError('Lỗi khi tải file từ cloud');
+      if (window.showToast) {
+        window.showToast('Lỗi khi tải file từ cloud', 'error');
+      }
     }
   };
 
   // Cloud Load - download from cloud and load into emulator
   const handleCloudLoad = async () => {
+    setCloudLoadStatus(null); // Reset status
     
     if (!user) {
+      setCloudLoadStatus('error');
+      setError('Vui lòng đăng nhập để tải từ cloud');
       return;
     }
 
@@ -459,6 +567,7 @@ const EmulatorPage = () => {
       const result = await saveManager.loadFromCloud(0);
       
       if (!result.success) {
+        setCloudLoadStatus('error');
         setError('Không tìm thấy save data trên cloud');
         return;
       }
@@ -466,6 +575,8 @@ const EmulatorPage = () => {
       // Step 2: Send to iframe to write file
       const iframe = document.querySelector('#gameContainer iframe');
       if (!iframe) {
+        setCloudLoadStatus('error');
+        setError('Không tìm thấy game để tải');
         return;
       }
 
@@ -477,6 +588,7 @@ const EmulatorPage = () => {
       }, '*');
 
     } catch (error) {
+      setCloudLoadStatus('error');
       setError('Lỗi khi tải save từ cloud');
     }
   };
@@ -545,6 +657,8 @@ const EmulatorPage = () => {
             onDebugLoadState={handleDebugLoadState}
             onInterceptLoadState={handleInterceptLoadState}
             isLoggedIn={!!user}
+            cloudSaveStatus={cloudSaveStatus}
+            cloudLoadStatus={cloudLoadStatus}
           />
 
           {/* Temporary test button for development */}
