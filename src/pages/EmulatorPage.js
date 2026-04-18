@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getConsoleById, getConsoleCore } from '../config/Config';
 import { useAuth } from '../contexts/AuthContext';
 import { saveManager } from '../services/SaveManager';
+import { contentSaveManager } from '../services/ContentSaveManager';
 import { recentGamesManager } from '../services/RecentGames';
 import Layout from '../components/Layout';
 import FloatingElements from '../components/FloatingElements';
@@ -113,6 +114,37 @@ const EmulatorPage = () => {
       }
     }
   };
+
+  // Handle save state content to database
+  const handleSaveStateContent = useCallback(async (slot, saveData) => {
+    if (user && selectedFile) {
+      contentSaveManager.initialize(user, selectedFile.name, consoleType);
+    }
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const result = await contentSaveManager.saveContentToCloud(slot, saveData);
+      
+      if (result.success) {
+        if (window.showToast) {
+          window.showToast('Đã lưu content lên database thành công!', 'success');
+        }
+      } else {
+        setError(`Lỗi khi lưu content: ${result.error}`);
+        if (window.showToast) {
+          window.showToast('Lỗi khi lưu content lên database', 'error');
+        }
+      }
+    } catch (error) {
+      setError(`Lỗi khi lưu content: ${error.message}`);
+      if (window.showToast) {
+        window.showToast('Lỗi khi lưu content lên database', 'error');
+      }
+    }
+  }, [user, selectedFile, consoleType]);
 
   // Handle save state to cloud
   const handleSaveState = useCallback(async (slot, saveData) => {
@@ -322,6 +354,29 @@ const EmulatorPage = () => {
             setError(`Lỗi Cloud Load: ${event.data.error}`);
             if (window.showToast) {
               window.showToast('Lỗi khi tải từ cloud', 'error');
+            }
+          } else if (event.data.type === 'saveStateContent') {
+            // Cloud save content from our button
+            handleSaveStateContent(event.data.slot, event.data.data);
+            
+          } else if (event.data.type === 'cloudSaveContentError') {
+            // Cloud save content error
+            setError(`Lỗi Cloud Save Content: ${event.data.error}`);
+            if (window.showToast) {
+              window.showToast('Lỗi khi lưu content lên database', 'error');
+            }
+            
+          } else if (event.data.type === 'cloudLoadContentSuccess') {
+            // Cloud load content success
+            if (window.showToast) {
+              window.showToast('Đã tải content từ database thành công!', 'success');
+            }
+            
+          } else if (event.data.type === 'cloudLoadContentError') {
+            // Cloud load content error
+            setError(`Lỗi Cloud Load Content: ${event.data.error}`);
+            if (window.showToast) {
+              window.showToast('Lỗi khi tải content từ database', 'error');
             }
           }
         };
@@ -548,6 +603,82 @@ const EmulatorPage = () => {
     }
   };
 
+  // Cloud Save Content - save content to database
+  const handleCloudSaveContent = async () => {
+    if (!user) {
+      setError('Vui lòng đăng nhập để lưu content');
+      if (window.showToast) {
+        window.showToast('Vui lòng đăng nhập để lưu content', 'warning');
+      }
+      return;
+    }
+
+    const iframe = document.querySelector('#gameContainer iframe');
+    if (!iframe) {
+      setError('Không tìm thấy game để lưu');
+      return;
+    }
+
+    // Initialize content save manager
+    if (selectedFile) {
+      contentSaveManager.initialize(user, selectedFile.name, consoleType);
+    }
+
+    // Tell iframe to save state and send data back for content storage
+    iframe.contentWindow.postMessage({type: 'cloudSaveContent'}, '*');
+  };
+
+  // Cloud Load Content - load content from database
+  const handleCloudLoadContent = async () => {
+    if (!user) {
+      setError('Vui lòng đăng nhập để tải content');
+      if (window.showToast) {
+        window.showToast('Vui lòng đăng nhập để tải content', 'warning');
+      }
+      return;
+    }
+
+    if (selectedFile) {
+      contentSaveManager.initialize(user, selectedFile.name, consoleType);
+    }
+
+    try {
+      // Load content from database
+      const result = await contentSaveManager.loadContentFromCloud(0);
+      
+      if (!result.success) {
+        setError('Không tìm thấy save content trên database');
+        if (window.showToast) {
+          window.showToast('Không tìm thấy save content trên database', 'warning');
+        }
+        return;
+      }
+
+      // Send content to iframe to load
+      const iframe = document.querySelector('#gameContainer iframe');
+      if (!iframe) {
+        setError('Không tìm thấy game để tải');
+        return;
+      }
+
+      iframe.contentWindow.postMessage({
+        type: 'cloudLoadContentAndApply',
+        saveData: result.saveData,
+        metadata: result.metadata
+      }, '*');
+
+      if (window.showToast) {
+        window.showToast('Đã tải content từ database thành công!', 'success');
+      }
+
+    } catch (error) {
+      setError('Lỗi khi tải content từ database');
+      if (window.showToast) {
+        window.showToast('Lỗi khi tải content từ database', 'error');
+      }
+    }
+  };
+
   // Cloud Load - download from cloud and load into emulator
   const handleCloudLoad = async () => {
     setCloudLoadStatus(null); // Reset status
@@ -653,6 +784,8 @@ const EmulatorPage = () => {
             onCloudSave={handleCloudSave}
             onCloudLoad={handleCloudLoad}
             onCloudDownload={handleCloudDownload}
+            onCloudSaveContent={handleCloudSaveContent}
+            onCloudLoadContent={handleCloudLoadContent}
             onDebugFilesystem={handleDebugFilesystem}
             onDebugLoadState={handleDebugLoadState}
             onInterceptLoadState={handleInterceptLoadState}
@@ -698,7 +831,6 @@ const EmulatorPage = () => {
       {/* <PerformanceMonitor isGameRunning={isGameLoaded} /> */}
     </Layout>
   );
-
 };
 
 export default EmulatorPage;

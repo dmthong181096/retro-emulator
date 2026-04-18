@@ -73,3 +73,35 @@ CREATE POLICY "Users can update own save files" ON storage.objects
 
 CREATE POLICY "Users can delete own save files" ON storage.objects
   FOR DELETE USING (bucket_id = 'save-states' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+-- Create save_states_content table for content-based saves (alternative to file storage)
+CREATE TABLE IF NOT EXISTS save_states_content (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    game_name TEXT NOT NULL,
+    console_type TEXT NOT NULL,
+    slot_number INTEGER DEFAULT 0,
+    save_content TEXT NOT NULL, -- Base64 encoded save data
+    content_size INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Unique constraint: one save per user/game/console/slot
+    UNIQUE(user_id, game_name, console_type, slot_number)
+);
+
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS idx_save_states_content_user_game 
+ON save_states_content(user_id, game_name, console_type);
+
+-- Enable RLS
+ALTER TABLE save_states_content ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for save_states_content
+CREATE POLICY "Users can manage their own content saves" ON save_states_content
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Trigger to auto-update updated_at for content table
+CREATE TRIGGER update_save_states_content_updated_at 
+    BEFORE UPDATE ON save_states_content 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

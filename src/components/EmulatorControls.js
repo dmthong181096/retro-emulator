@@ -12,6 +12,8 @@ const EmulatorControls = ({
   onCloudSave,
   onCloudLoad,
   onCloudDownload,
+  onCloudSaveContent,
+  onCloudLoadContent,
   onDebugFilesystem,
   onDebugLoadState,
   onInterceptLoadState,
@@ -172,6 +174,25 @@ const EmulatorControls = ({
               title={!isLoggedIn ? "Vui lòng đăng nhập để tải file" : "Tải file save state về máy"}
             >
               {isDownloading ? '⏳ Đang tải...' : '📥 Tải File'}
+            </button>
+
+            {/* New Content-based Cloud Save/Load buttons */}
+            <button
+              className="control-btn cloud-save-content-btn"
+              onClick={onCloudSaveContent}
+              disabled={!isLoggedIn}
+              title={!isLoggedIn ? "Vui lòng đăng nhập để sử dụng Cloud Save Content" : "Lưu game content lên database"}
+            >
+              ☁️ Lưu Cloud (Content)
+            </button>
+
+            <button
+              className="control-btn cloud-load-content-btn"
+              onClick={onCloudLoadContent}
+              disabled={!isLoggedIn}
+              title={!isLoggedIn ? "Vui lòng đăng nhập để sử dụng Cloud Load Content" : "Tải game content từ database"}
+            >
+              📥 Tải Cloud (Content)
             </button>
 
             {/* Debug buttons - only show in development */}
